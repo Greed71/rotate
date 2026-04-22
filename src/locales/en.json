@@ -1,22 +1,22 @@
 {
   "app": {
-    "vaultUnavailable": "Vault unavailable: {{error}}",
-    "vaultInit": "Initializing vault…",
-    "backendConnecting": "Connecting to backend…",
-    "browserOnlyBackend": "Browser only (npm run dev): no Rust process. Use npm run desktop for the backend."
+    "vaultUnavailable": "Could not start the vault: {{error}}",
+    "vaultInit": "Starting…",
+    "backendConnecting": "Connecting to the app…",
+    "browserOnlyBackend": "You’re running the frontend only (npm run dev). Launch Rotate with npm run desktop to use the vault and integrations."
   },
   "sidebar": {
-    "tagline": "Keys in one place",
+    "tagline": "Your API keys, under control",
     "navHome": "Home",
-    "navHomeDesc": "Overview",
+    "navHomeDesc": "Status and shortcuts",
     "navExplore": "Explore",
-    "navExploreDesc": "Add services",
-    "navServices": "My services",
-    "navServicesDesc": "Connected",
+    "navExploreDesc": "Add a provider",
+    "navServices": "Services",
+    "navServicesDesc": "Linked accounts",
     "session": "Session",
     "pin": "PIN",
     "lock": "Lock",
-    "footerHint": "Vault: PIN hash in local DB, session in memory. Provider tokens in the OS keyring. Strict CSP in production.",
+    "footerHint": "Your PIN is stored only as a hash on this device; provider tokens live in the system keyring. Unlock sessions are time-limited in memory.",
     "language": "Language"
   },
   "lang": {
@@ -24,127 +24,127 @@
     "en": "English"
   },
   "home": {
-    "welcomeKicker": "Welcome",
-    "emptyTitle": "Start from the service catalog",
-    "emptyDescription": "The main area stays empty until you add at least one provider from Explore. Everyone keeps their own pool—you only rotate what you choose.",
+    "welcomeKicker": "Rotate",
+    "emptyTitle": "Add your first service",
+    "emptyDescription": "Pick a provider in Explore and connect it to your workspace. You rotate only the assets you choose—nothing else in the account is touched.",
     "openExplore": "Open Explore",
     "kicker": "Home",
-    "withServicesTitle": "Your connected services",
-    "withServicesSubtitle": "Pick a service to see rotatable resources (coming soon)."
+    "withServicesTitle": "Services in your vault",
+    "withServicesSubtitle": "Open any account below for keys, rotation, and connection settings."
   },
   "explore": {
     "kicker": "Explore",
-    "title": "Choose what you want to rotate",
-    "subtitle": "Add only the providers you use. Rotation is always per resource, never global.",
-    "envExamples": ".env examples",
-    "added": "Added",
+    "title": "Which providers to manage here",
+    "subtitle": "Add only what you actually use. Every rotation is scoped: one resource at a time, never a blind reset of the whole account.",
+    "envExamples": "Typical env vars",
+    "added": "In vault",
     "add": "Add",
-    "inPool": "Already in pool"
+    "inPool": "Already added"
   },
   "automation": {
-    "full": "High automation",
-    "partial": "Semi-automatic",
-    "manual": "Manual"
+    "full": "Guided rotation",
+    "partial": "Assisted + manual steps",
+    "manual": "Manual only"
   },
   "providers": {
     "cloudflare": {
       "title": "Cloudflare",
       "defaultLabel": "Cloudflare account",
-      "blurb": "API tokens and account permissions. Suited for guided rotation."
+      "blurb": "Link Account ID and management token: list tokens, rotate with the same policies, secrets stored securely."
     },
     "supabase": {
       "title": "Supabase",
       "defaultLabel": "Supabase project",
-      "blurb": "Project keys and tenant-bound secrets. Some operations via API."
+      "blurb": "Project keys and tenant secrets. When supported, sensitive actions stay behind the vault."
     },
     "oauth_google": {
       "title": "OAuth (Google)",
-      "defaultLabel": "OAuth Google",
-      "blurb": "OAuth client ID/secret. Often requires steps in Google Cloud Console."
+      "defaultLabel": "Google OAuth client",
+      "blurb": "Client ID and secret for OAuth flows. Usually configured in Google Cloud Console."
     }
   },
   "services": {
-    "empty": "You have not connected any services yet. Add them from Explore to build your personal pool.",
-    "goExplore": "Go to Explore",
-    "kicker": "My services",
-    "title": "Personal pool",
-    "subtitle": "Click a row to open the service detail (Cloudflare is the first supported).",
-    "colService": "Service",
-    "colLabel": "Label",
+    "empty": "No services yet. Go to Explore to connect your first account.",
+    "goExplore": "Open Explore",
+    "kicker": "Services",
+    "title": "Your accounts",
+    "subtitle": "Click a row to open the account and manage tokens and settings.",
+    "colService": "Provider",
+    "colLabel": "Name",
     "colAdded": "Added"
   },
   "placeholder": {
     "back": "← Back to services",
-    "body": "We integrate one service at a time. After Cloudflare, Supabase and OAuth (Google) will follow the same pattern: link account, list rotatable resources, then rotation actions."
+    "body": "Rotate doesn’t support this provider yet. Full controls—account linking, keys, and rotation—will ship in a later update."
   },
   "vault": {
     "kicker": "Vault",
-    "setupTitle": "Create your vault PIN",
-    "setupBody": "Your PIN is never stored in plaintext—only an Argon2 hash in the app’s local database (<0>rotate.db</0>). Without the PIN you cannot access integrations or secrets.",
-    "pinLabel": "PIN ({{min}}+ characters)",
-    "confirmLabel": "Repeat PIN",
-    "submit": "Activate vault",
+    "setupTitle": "Set your vault PIN",
+    "setupBody": "We never store your PIN in plaintext—only an Argon2 hash in the local database (<0>rotate.db</0>). Without the PIN, integrations and saved secrets stay locked.",
+    "pinLabel": "PIN (min. {{min}} characters)",
+    "confirmLabel": "Confirm PIN",
+    "submit": "Enable vault",
     "saving": "Saving…",
-    "pinMin": "Use at least {{min}} characters.",
-    "pinMismatch": "PINs do not match.",
+    "pinMin": "The PIN must be at least {{min}} characters.",
+    "pinMismatch": "The two PINs do not match.",
     "lockedKicker": "Vault locked",
     "unlockTitle": "Enter your PIN",
     "unlockPlaceholder": "PIN",
     "unlock": "Unlock",
-    "unlockBusy": "…"
+    "unlockBusy": "Checking…"
   },
   "changePin": {
     "title": "Change PIN",
-    "newMin": "New PIN: at least {{min}} characters.",
-    "mismatch": "New PINs do not match.",
+    "newMin": "The new PIN must be at least {{min}} characters.",
+    "mismatch": "The two new PIN entries do not match.",
     "currentPh": "Current PIN",
-    "newPh": "New PIN ({{min}}+)",
+    "newPh": "New PIN (min. {{min}})",
     "repeatPh": "Repeat new PIN",
     "cancel": "Cancel",
     "save": "Save"
   },
   "cloudflare": {
     "back": "← Back to services",
-    "intro": "Management token in the OS credential store. To list and rotate tokens you need at least <0>Account · API Tokens · Read</0> and <1>Edit</1> (create and delete).",
+    "intro": "The management token is stored in the system keyring. To list and rotate tokens you need at least <0>Account · API Tokens · Read</0> and <1>Edit</1> (create and delete).",
     "accountId": "Account ID",
-    "accountIdPh": "32 hexadecimal characters",
+    "accountIdPh": "32 hex characters",
     "apiToken": "Management API token",
-    "apiTokenPh": "Saved in the keyring after verification",
-    "saveVerify": "Save and verify",
+    "apiTokenPh": "Saved to the keyring after verification",
+    "saveVerify": "Link account",
     "verifying": "Verifying…",
     "linked": "Linked account",
     "showToken": "Show token",
     "refreshList": "Refresh list",
-    "unlink": "Unlink",
+    "unlink": "Remove link",
     "colName": "Name",
     "colStatus": "Status",
     "colExpiry": "Expiry",
     "colId": "ID",
     "colActions": "Actions",
     "rotate": "Rotate",
-    "noTokens": "No tokens listed (check your management token permissions).",
-    "footnote": "Rotate creates a new token with the same policies as the selected one. The new secret is shown only once—copy it immediately or update the vault if it is Rotate’s management token.",
-    "confirmUnlink": "Remove Account ID and token from the keyring?",
+    "noTokens": "No tokens returned. Check that the management token has the right permissions.",
+    "footnote": "Rotation creates a new token with the same policies. The secret is shown only once—copy it now. If you rotate the token Rotate uses to call Cloudflare, update the saved value before revoking the old one.",
+    "confirmUnlink": "Remove the Account ID and token from the keyring on this device?",
     "confirmReveal": "Anyone who can see your screen can read the token. Continue?",
-    "rotateTitle": "Rotate token",
+    "rotateTitle": "Rotate this token",
     "rotateLead": "A new token will be created with the same policies as <0>{{name}}</0>.",
-    "rotateUpdateVault": "Update the token saved in Rotate in the keyring (required if you are rotating the management token used by this app).",
-    "rotateRevoke": "Revoke the previous token after creating the new one.",
-    "rotateWarn": "If you revoke the management token without updating the vault, the app cannot call Cloudflare until you paste a valid token.",
+    "rotateUpdateVault": "Update the token saved in Rotate (required if you rotate the token this app uses for Cloudflare).",
+    "rotateRevoke": "Revoke the previous token after the new one is created.",
+    "rotateWarn": "If you revoke the management token without updating Rotate, the app will stop working with Cloudflare until you paste a valid token.",
     "cancel": "Cancel",
     "confirm": "Confirm",
-    "rotating": "Rotating…",
-    "resultTitle": "New token created",
-    "resultLead": "Save this value now—Cloudflare will not show it again.",
-    "resultVault": "Vault updated:",
+    "rotating": "Working…",
+    "resultTitle": "New token ready",
+    "resultLead": "Store this value now—the Cloudflare dashboard will not show it again.",
+    "resultVault": "Token updated in Rotate:",
     "resultRevoked": "Previous token revoked:",
-    "yes": "yes",
-    "no": "no",
-    "copySecretAuto": "Copy secret (auto-clear)",
+    "yes": "Yes",
+    "no": "No",
+    "copySecretAuto": "Copy secret (clipboard clears shortly)",
     "close": "Close",
-    "revealTitle": "Management token (sensitive)",
-    "revealLead": "Do not share your screen. Close when done.",
-    "copyAuto": "Copy (auto-clear)",
-    "clipboardHint": "Clipboard: auto-clear in ~30s."
+    "revealTitle": "Management token",
+    "revealLead": "Use in a private setting—don’t share your screen. Close as soon as you’re done.",
+    "copyAuto": "Copy (clipboard clears shortly)",
+    "clipboardHint": "Clipboard will clear automatically in about 30 seconds."
   }
 }

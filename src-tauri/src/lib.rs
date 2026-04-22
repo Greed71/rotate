@@ -12,7 +12,7 @@ use serde::Serialize;
 #[tauri::command]
 fn platform_blurb() -> String {
     format!(
-        "Rust backend attivo · OS: {} · arch: {} · crate v{}",
+        "Backend ready · OS: {} · arch: {} · v{}",
         std::env::consts::OS,
         std::env::consts::ARCH,
         env!("CARGO_PKG_VERSION")
