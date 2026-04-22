@@ -1,0 +1,26 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capability for the main window",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "opener:default",
+    "clipboard-manager:allow-write-text",
+    "clipboard-manager:allow-clear",
+    "allow-platform-blurb",
+    "allow-security-status",
+    "allow-security-set-pin",
+    "allow-security-unlock",
+    "allow-security-lock",
+    "allow-security-change-pin",
+    "allow-integrations-list",
+    "allow-integrations-add",
+    "allow-cloudflare-link",
+    "allow-cloudflare-status",
+    "allow-cloudflare-list-tokens",
+    "allow-cloudflare-reveal-managed-token",
+    "allow-cloudflare-rotate-account-token",
+    "allow-cloudflare-unlink"
+  ]
+}
