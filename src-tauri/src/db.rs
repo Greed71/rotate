@@ -55,7 +55,7 @@ fn migrate(conn: &Connection) -> Result<(), String> {
 
 const VAULT_KEY_PIN_PHC: &str = "pin_phc";
 
-/// Hash Argon2 (formato PHC) del PIN — non il PIN in chiaro.
+/// Hash Argon2 (formato PHC) del PIN - non il PIN in chiaro.
 pub fn get_vault_pin_phc(app: &AppHandle) -> Result<Option<String>, String> {
     let conn = open_conn(app)?;
     let mut stmt = conn

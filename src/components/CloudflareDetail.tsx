@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { copySensitiveWithAutoClear } from "../clipboardSecure";
 import type {
   CfTokenRow,
@@ -20,6 +21,7 @@ type Props = {
 };
 
 export function CloudflareDetail({ integration, onBack }: Props) {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<CloudflareStatusDto | null>(null);
   const [tokens, setTokens] = useState<CfTokenRow[]>([]);
   const [accountId, setAccountId] = useState("");
@@ -89,7 +91,7 @@ export function CloudflareDetail({ integration, onBack }: Props) {
   }
 
   async function handleUnlink() {
-    if (!confirm("Rimuovere Account ID e token dal portachiavi?")) return;
+    if (!confirm(t("cloudflare.confirmUnlink"))) return;
     setBusy(true);
     setError(null);
     try {
@@ -107,7 +109,7 @@ export function CloudflareDetail({ integration, onBack }: Props) {
   const linked = status?.linked ?? false;
 
   async function openReveal() {
-    if (!confirm("Chi vede lo schermo può leggere il token. Continuare?")) return;
+    if (!confirm(t("cloudflare.confirmReveal"))) return;
     setBusy(true);
     setError(null);
     try {
@@ -131,16 +133,16 @@ export function CloudflareDetail({ integration, onBack }: Props) {
     if (!revealedToken) return;
     try {
       await copySensitiveWithAutoClear(revealedToken);
-      setCopyHint("Appunti: cancellazione automatica tra ~30s.");
+      setCopyHint(t("cloudflare.clipboardHint"));
     } catch (err) {
       setError(errText(err));
     }
   }
 
-  function openRotateModal(t: CfTokenRow) {
+  function openRotateModal(tok: CfTokenRow) {
     setRotateRevokeOld(true);
     setRotateUpdateVault(false);
-    setRotateTarget(t);
+    setRotateTarget(tok);
   }
 
   function closeRotateModal() {
@@ -179,7 +181,7 @@ export function CloudflareDetail({ integration, onBack }: Props) {
     if (!rotateResult) return;
     try {
       await copySensitiveWithAutoClear(rotateResult.newTokenSecret);
-      setRotateCopyHint("Appunti: cancellazione automatica tra ~30s.");
+      setRotateCopyHint(t("cloudflare.clipboardHint"));
     } catch (err) {
       setError(errText(err));
     }
@@ -194,17 +196,20 @@ export function CloudflareDetail({ integration, onBack }: Props) {
             onClick={onBack}
             className="mb-2 text-xs font-medium text-accent hover:underline"
           >
-            ← Torna ai servizi
+            {t("cloudflare.back")}
           </button>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
-            Cloudflare
+            {t("providers.cloudflare.title")}
           </p>
           <h1 className="text-2xl font-semibold text-ink">{integration.label}</h1>
           <p className="mt-1 text-sm text-ink-muted">
-            Token di gestione nel portachiavi di Windows. Per elencare e ruotare i token serve al
-            minimo{" "}
-            <span className="font-mono text-xs">Account · API Tokens · Read</span> e{" "}
-            <span className="font-mono text-xs">Edit</span> (creazione ed eliminazione).
+            <Trans
+              i18nKey="cloudflare.intro"
+              components={[
+                <span className="font-mono text-xs" key="0" />,
+                <span className="font-mono text-xs" key="1" />,
+              ]}
+            />
           </p>
         </div>
       </header>
@@ -222,20 +227,20 @@ export function CloudflareDetail({ integration, onBack }: Props) {
         >
           <div className="space-y-1.5">
             <label htmlFor="cf-account" className="text-xs font-semibold text-ink-muted">
-              Account ID
+              {t("cloudflare.accountId")}
             </label>
             <input
               id="cf-account"
               value={accountId}
               onChange={(e) => setAccountId(e.target.value)}
               className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm text-ink outline-none ring-accent/40 focus:ring-2"
-              placeholder="32 caratteri esadecimali"
+              placeholder={t("cloudflare.accountIdPh")}
               autoComplete="off"
             />
           </div>
           <div className="space-y-1.5">
             <label htmlFor="cf-token" className="text-xs font-semibold text-ink-muted">
-              API Token (gestione)
+              {t("cloudflare.apiToken")}
             </label>
             <input
               id="cf-token"
@@ -243,7 +248,7 @@ export function CloudflareDetail({ integration, onBack }: Props) {
               value={apiToken}
               onChange={(e) => setApiToken(e.target.value)}
               className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 font-mono text-sm text-ink outline-none ring-accent/40 focus:ring-2"
-              placeholder="Salvato nel portachiavi dopo la verifica"
+              placeholder={t("cloudflare.apiTokenPh")}
               autoComplete="off"
             />
           </div>
@@ -252,14 +257,14 @@ export function CloudflareDetail({ integration, onBack }: Props) {
             disabled={busy}
             className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-surface-0 hover:brightness-110 disabled:opacity-50"
           >
-            {busy ? "Verifica…" : "Salva e verifica"}
+            {busy ? t("cloudflare.verifying") : t("cloudflare.saveVerify")}
           </button>
         </form>
       ) : (
         <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-surface-3/80 bg-surface-1/80 px-5 py-4">
             <div>
-              <p className="text-xs text-ink-muted">Account collegato</p>
+              <p className="text-xs text-ink-muted">{t("cloudflare.linked")}</p>
               <p className="font-mono text-sm text-ink">{status?.accountId}</p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -269,7 +274,7 @@ export function CloudflareDetail({ integration, onBack }: Props) {
                 onClick={() => void openReveal()}
                 className="rounded-lg border border-amber-500/40 px-3 py-1.5 text-sm text-amber-100 hover:bg-amber-500/10"
               >
-                Mostra token
+                {t("cloudflare.showToken")}
               </button>
               <button
                 type="button"
@@ -277,7 +282,7 @@ export function CloudflareDetail({ integration, onBack }: Props) {
                 onClick={() => void refreshTokens()}
                 className="rounded-lg border border-surface-3 px-3 py-1.5 text-sm text-ink hover:border-accent/40"
               >
-                Aggiorna elenco
+                {t("cloudflare.refreshList")}
               </button>
               <button
                 type="button"
@@ -285,7 +290,7 @@ export function CloudflareDetail({ integration, onBack }: Props) {
                 onClick={() => void handleUnlink()}
                 className="rounded-lg border border-rose-500/40 px-3 py-1.5 text-sm text-rose-200 hover:bg-rose-500/10"
               >
-                Scollega
+                {t("cloudflare.unlink")}
               </button>
             </div>
           </div>
@@ -294,39 +299,39 @@ export function CloudflareDetail({ integration, onBack }: Props) {
             <table className="w-full text-left text-sm">
               <thead className="bg-surface-2/80 text-[11px] uppercase tracking-wide text-ink-muted">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Nome</th>
-                  <th className="px-4 py-3 font-semibold">Stato</th>
-                  <th className="px-4 py-3 font-semibold">Scadenza</th>
-                  <th className="px-4 py-3 font-mono text-[10px] font-semibold">ID</th>
-                  <th className="px-4 py-3 font-semibold">Azioni</th>
+                  <th className="px-4 py-3 font-semibold">{t("cloudflare.colName")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("cloudflare.colStatus")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("cloudflare.colExpiry")}</th>
+                  <th className="px-4 py-3 font-mono text-[10px] font-semibold">{t("cloudflare.colId")}</th>
+                  <th className="px-4 py-3 font-semibold">{t("cloudflare.colActions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-3/60 bg-surface-1/40">
                 {tokens.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-4 py-6 text-center text-ink-muted">
-                      Nessun token elencato (verifica i permessi del token di gestione).
+                      {t("cloudflare.noTokens")}
                     </td>
                   </tr>
                 ) : (
-                  tokens.map((t) => (
-                    <tr key={t.id} className="text-ink">
-                      <td className="px-4 py-3 font-medium">{t.name}</td>
-                      <td className="px-4 py-3 text-ink-muted">{t.status}</td>
+                  tokens.map((tok) => (
+                    <tr key={tok.id} className="text-ink">
+                      <td className="px-4 py-3 font-medium">{tok.name}</td>
+                      <td className="px-4 py-3 text-ink-muted">{tok.status}</td>
                       <td className="px-4 py-3 text-ink-muted">
-                        {t.expiresOn ?? "—"}
+                        {tok.expiresOn ?? "\u2014"}
                       </td>
                       <td className="max-w-[120px] truncate px-4 py-3 font-mono text-[11px] text-ink-muted">
-                        {t.id}
+                        {tok.id}
                       </td>
                       <td className="px-4 py-3">
                         <button
                           type="button"
                           disabled={busy || rotateBusy}
-                          onClick={() => openRotateModal(t)}
+                          onClick={() => openRotateModal(tok)}
                           className="rounded-lg border border-accent/50 px-2.5 py-1 text-xs font-medium text-accent hover:bg-accent/10 disabled:opacity-50"
                         >
-                          Ruota
+                          {t("cloudflare.rotate")}
                         </button>
                       </td>
                     </tr>
@@ -335,21 +340,20 @@ export function CloudflareDetail({ integration, onBack }: Props) {
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-ink-muted">
-            Ruota crea un nuovo token con le stesse policy del token scelto. Il valore del nuovo
-            token è mostrato una sola volta: copialo subito o aggiorna il vault se è il token di
-            gestione Rotate.
-          </p>
+          <p className="text-xs text-ink-muted">{t("cloudflare.footnote")}</p>
         </div>
       )}
 
       {rotateTarget ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
           <div className="w-full max-w-lg rounded-2xl border border-surface-3 bg-surface-1 p-6 shadow-2xl">
-            <h3 className="text-sm font-semibold text-ink">Ruota token</h3>
+            <h3 className="text-sm font-semibold text-ink">{t("cloudflare.rotateTitle")}</h3>
             <p className="mt-1 text-xs text-ink-muted">
-              Verrà creato un nuovo token con le stesse policy di{" "}
-              <span className="font-medium text-ink">{rotateTarget.name}</span>.
+              <Trans
+                i18nKey="cloudflare.rotateLead"
+                values={{ name: rotateTarget.name }}
+                components={[<span className="font-medium text-ink" key="0" />]}
+              />
             </p>
             <label className="mt-4 flex cursor-pointer items-start gap-2 text-sm text-ink">
               <input
@@ -358,10 +362,7 @@ export function CloudflareDetail({ integration, onBack }: Props) {
                 onChange={(e) => setRotateUpdateVault(e.target.checked)}
                 className="mt-1 rounded border-surface-3"
               />
-              <span>
-                Aggiorna il token salvato in Rotate nel portachiavi (obbligatorio se stai ruotando
-                il token di gestione usato da questa app).
-              </span>
+              <span>{t("cloudflare.rotateUpdateVault")}</span>
             </label>
             <label className="mt-3 flex cursor-pointer items-start gap-2 text-sm text-ink">
               <input
@@ -370,12 +371,9 @@ export function CloudflareDetail({ integration, onBack }: Props) {
                 onChange={(e) => setRotateRevokeOld(e.target.checked)}
                 className="mt-1 rounded border-surface-3"
               />
-              <span>Revoca il token precedente dopo aver creato il nuovo.</span>
+              <span>{t("cloudflare.rotateRevoke")}</span>
             </label>
-            <p className="mt-3 text-xs text-amber-100/90">
-              Se revochi il token di gestione senza aver aggiornato il vault, l&apos;app non
-              potrà più chiamare Cloudflare finché non incolli un token valido.
-            </p>
+            <p className="mt-3 text-xs text-amber-100/90">{t("cloudflare.rotateWarn")}</p>
             <div className="mt-5 flex flex-wrap justify-end gap-2">
               <button
                 type="button"
@@ -383,7 +381,7 @@ export function CloudflareDetail({ integration, onBack }: Props) {
                 onClick={closeRotateModal}
                 className="rounded-lg border border-surface-3 px-3 py-1.5 text-sm text-ink hover:border-accent/40 disabled:opacity-50"
               >
-                Annulla
+                {t("cloudflare.cancel")}
               </button>
               <button
                 type="button"
@@ -391,7 +389,7 @@ export function CloudflareDetail({ integration, onBack }: Props) {
                 onClick={() => void confirmRotate()}
                 className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-surface-0 disabled:opacity-50"
               >
-                {rotateBusy ? "Rotazione…" : "Conferma"}
+                {rotateBusy ? t("cloudflare.rotating") : t("cloudflare.confirm")}
               </button>
             </div>
           </div>
@@ -401,10 +399,8 @@ export function CloudflareDetail({ integration, onBack }: Props) {
       {rotateResult ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
           <div className="w-full max-w-lg rounded-2xl border border-amber-500/30 bg-surface-1 p-6 shadow-2xl">
-            <h3 className="text-sm font-semibold text-amber-100">Nuovo token creato</h3>
-            <p className="mt-1 text-xs text-ink-muted">
-              Salva subito questo valore: Cloudflare non lo mostrerà di nuovo.
-            </p>
+            <h3 className="text-sm font-semibold text-amber-100">{t("cloudflare.resultTitle")}</h3>
+            <p className="mt-1 text-xs text-ink-muted">{t("cloudflare.resultLead")}</p>
             <p className="mt-2 font-mono text-[11px] text-ink-muted">
               ID: {rotateResult.newTokenId}
             </p>
@@ -413,16 +409,20 @@ export function CloudflareDetail({ integration, onBack }: Props) {
             </pre>
             <ul className="mt-3 space-y-1 text-xs text-ink-muted">
               <li>
-                Vault aggiornato:{" "}
+                {t("cloudflare.resultVault")}{" "}
                 {rotateResult.updatedVaultSecret ? (
-                  <span className="text-accent">sì</span>
+                  <span className="text-accent">{t("cloudflare.yes")}</span>
                 ) : (
-                  <span>no</span>
+                  <span>{t("cloudflare.no")}</span>
                 )}
               </li>
               <li>
-                Token precedente revocato:{" "}
-                {rotateResult.revokedOld ? <span className="text-accent">sì</span> : <span>no</span>}
+                {t("cloudflare.resultRevoked")}{" "}
+                {rotateResult.revokedOld ? (
+                  <span className="text-accent">{t("cloudflare.yes")}</span>
+                ) : (
+                  <span>{t("cloudflare.no")}</span>
+                )}
               </li>
             </ul>
             {rotateCopyHint ? <p className="mt-2 text-xs text-accent">{rotateCopyHint}</p> : null}
@@ -432,14 +432,14 @@ export function CloudflareDetail({ integration, onBack }: Props) {
                 onClick={() => void handleCopyNewSecret()}
                 className="rounded-lg border border-surface-3 px-3 py-1.5 text-sm text-ink hover:border-accent/40"
               >
-                Copia segreto (auto-cancella)
+                {t("cloudflare.copySecretAuto")}
               </button>
               <button
                 type="button"
                 onClick={closeRotateResult}
                 className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-surface-0"
               >
-                Chiudi
+                {t("cloudflare.close")}
               </button>
             </div>
           </div>
@@ -449,10 +449,8 @@ export function CloudflareDetail({ integration, onBack }: Props) {
       {revealOpen && revealedToken ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
           <div className="w-full max-w-lg rounded-2xl border border-amber-500/30 bg-surface-1 p-6 shadow-2xl">
-            <h3 className="text-sm font-semibold text-amber-100">Token di gestione (sensibile)</h3>
-            <p className="mt-1 text-xs text-ink-muted">
-              Non condividere lo schermo. Chiudi appena finito.
-            </p>
+            <h3 className="text-sm font-semibold text-amber-100">{t("cloudflare.revealTitle")}</h3>
+            <p className="mt-1 text-xs text-ink-muted">{t("cloudflare.revealLead")}</p>
             <pre className="mt-4 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-surface-0 p-3 font-mono text-xs text-ink">
               {revealedToken}
             </pre>
@@ -463,14 +461,14 @@ export function CloudflareDetail({ integration, onBack }: Props) {
                 onClick={() => void handleCopySecret()}
                 className="rounded-lg border border-surface-3 px-3 py-1.5 text-sm text-ink hover:border-accent/40"
               >
-                Copia (auto-cancella)
+                {t("cloudflare.copyAuto")}
               </button>
               <button
                 type="button"
                 onClick={closeReveal}
                 className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-surface-0"
               >
-                Chiudi
+                {t("cloudflare.close")}
               </button>
             </div>
           </div>

@@ -1,0 +1,150 @@
+{
+  "app": {
+    "vaultUnavailable": "Vault non disponibile: {{error}}",
+    "vaultInit": "Inizializzazione vault…",
+    "backendConnecting": "Connessione al backend…",
+    "browserOnlyBackend": "Solo browser (npm run dev): nessun processo Rust. Per il backend usa npm run desktop."
+  },
+  "sidebar": {
+    "tagline": "Chiavi in un solo posto",
+    "navHome": "Home",
+    "navHomeDesc": "Panoramica",
+    "navExplore": "Esplora",
+    "navExploreDesc": "Aggiungi servizi",
+    "navServices": "I miei servizi",
+    "navServicesDesc": "Collegati",
+    "session": "Sessione",
+    "pin": "PIN",
+    "lock": "Blocca",
+    "footerHint": "Vault: hash PIN in DB locale, sessione in memoria. Token provider nel portachiavi OS. CSP restrittiva in produzione.",
+    "language": "Lingua"
+  },
+  "lang": {
+    "it": "Italiano",
+    "en": "English"
+  },
+  "home": {
+    "welcomeKicker": "Benvenuto",
+    "emptyTitle": "Inizia dal catalogo servizi",
+    "emptyDescription": "L’area centrale è volutamente vuota finché non aggiungi almeno un provider da Esplora. Così ognuno ha il proprio pool e tu ruoti solo ciò che scegli.",
+    "openExplore": "Apri Esplora",
+    "kicker": "Home",
+    "withServicesTitle": "I tuoi servizi collegati",
+    "withServicesSubtitle": "Seleziona un servizio per vedere le risorse ruotabili (in arrivo)."
+  },
+  "explore": {
+    "kicker": "Esplora",
+    "title": "Scegli cosa vuoi poter ruotare",
+    "subtitle": "Aggiungi solo i provider che usi. La rotazione sarà sempre per singola risorsa, mai globale.",
+    "envExamples": "Esempi .env",
+    "added": "Aggiunto",
+    "add": "Aggiungi",
+    "inPool": "Già nel pool"
+  },
+  "automation": {
+    "full": "Automazione alta",
+    "partial": "Semi-automatico",
+    "manual": "Manuale"
+  },
+  "providers": {
+    "cloudflare": {
+      "title": "Cloudflare",
+      "defaultLabel": "Account Cloudflare",
+      "blurb": "API Token e permessi account. Adatto alla rigenerazione guidata."
+    },
+    "supabase": {
+      "title": "Supabase",
+      "defaultLabel": "Progetto Supabase",
+      "blurb": "Chiavi di progetto e segreti legati al tenant. Alcune operazioni via API."
+    },
+    "oauth_google": {
+      "title": "OAuth (Google)",
+      "defaultLabel": "OAuth Google",
+      "blurb": "Client ID/secret OAuth. Spesso richiede passaggi in Google Cloud Console."
+    }
+  },
+  "services": {
+    "empty": "Non hai ancora collegato servizi. Aggiungili da Esplora per costruire il tuo pool personale.",
+    "goExplore": "Vai a Esplora",
+    "kicker": "I miei servizi",
+    "title": "Pool personale",
+    "subtitle": "Clicca una riga per aprire il dettaglio del servizio (Cloudflare è il primo supportato).",
+    "colService": "Servizio",
+    "colLabel": "Etichetta",
+    "colAdded": "Aggiunto"
+  },
+  "placeholder": {
+    "back": "← Torna ai servizi",
+    "body": "Stiamo integrando un servizio alla volta. Dopo Cloudflare arriveranno Supabase e OAuth (Google) con lo stesso schema: collegamento account, elenco risorse ruotabili, poi azioni di rotazione."
+  },
+  "vault": {
+    "kicker": "Vault",
+    "setupTitle": "Crea il PIN del bunker",
+    "setupBody": "Il PIN non viene salvato in chiaro: solo un hash Argon2 nel database locale dell'app (<0>rotate.db</0>). Senza PIN non si accede a integrazioni né segreti.",
+    "pinLabel": "PIN ({{min}}+ caratteri)",
+    "confirmLabel": "Ripeti PIN",
+    "submit": "Attiva vault",
+    "saving": "Salvataggio…",
+    "pinMin": "Usa almeno {{min}} caratteri.",
+    "pinMismatch": "I PIN non coincidono.",
+    "lockedKicker": "Vault bloccato",
+    "unlockTitle": "Inserisci il PIN",
+    "unlockPlaceholder": "PIN",
+    "unlock": "Sblocca",
+    "unlockBusy": "…"
+  },
+  "changePin": {
+    "title": "Cambia PIN",
+    "newMin": "Nuovo PIN: almeno {{min}} caratteri.",
+    "mismatch": "Le nuove password non coincidono.",
+    "currentPh": "PIN attuale",
+    "newPh": "Nuovo PIN ({{min}}+)",
+    "repeatPh": "Ripeti nuovo PIN",
+    "cancel": "Annulla",
+    "save": "Salva"
+  },
+  "cloudflare": {
+    "back": "← Torna ai servizi",
+    "intro": "Token di gestione nel portachiavi di Windows. Per elencare e ruotare i token serve al minimo <0>Account · API Tokens · Read</0> e <1>Edit</1> (creazione ed eliminazione).",
+    "accountId": "Account ID",
+    "accountIdPh": "32 caratteri esadecimali",
+    "apiToken": "API Token (gestione)",
+    "apiTokenPh": "Salvato nel portachiavi dopo la verifica",
+    "saveVerify": "Salva e verifica",
+    "verifying": "Verifica…",
+    "linked": "Account collegato",
+    "showToken": "Mostra token",
+    "refreshList": "Aggiorna elenco",
+    "unlink": "Scollega",
+    "colName": "Nome",
+    "colStatus": "Stato",
+    "colExpiry": "Scadenza",
+    "colId": "ID",
+    "colActions": "Azioni",
+    "rotate": "Ruota",
+    "noTokens": "Nessun token elencato (verifica i permessi del token di gestione).",
+    "footnote": "Ruota crea un nuovo token con le stesse policy del token scelto. Il valore del nuovo token è mostrato una sola volta: copialo subito o aggiorna il vault se è il token di gestione Rotate.",
+    "confirmUnlink": "Rimuovere Account ID e token dal portachiavi?",
+    "confirmReveal": "Chi vede lo schermo può leggere il token. Continuare?",
+    "rotateTitle": "Ruota token",
+    "rotateLead": "Verrà creato un nuovo token con le stesse policy di <0>{{name}}</0>.",
+    "rotateUpdateVault": "Aggiorna il token salvato in Rotate nel portachiavi (obbligatorio se stai ruotando il token di gestione usato da questa app).",
+    "rotateRevoke": "Revoca il token precedente dopo aver creato il nuovo.",
+    "rotateWarn": "Se revochi il token di gestione senza aver aggiornato il vault, l'app non potrà più chiamare Cloudflare finché non incolli un token valido.",
+    "cancel": "Annulla",
+    "confirm": "Conferma",
+    "rotating": "Rotazione…",
+    "resultTitle": "Nuovo token creato",
+    "resultLead": "Salva subito questo valore: Cloudflare non lo mostrerà di nuovo.",
+    "resultVault": "Vault aggiornato:",
+    "resultRevoked": "Token precedente revocato:",
+    "yes": "sì",
+    "no": "no",
+    "copySecretAuto": "Copia segreto (auto-cancella)",
+    "close": "Chiudi",
+    "revealTitle": "Token di gestione (sensibile)",
+    "revealLead": "Non condividere lo schermo. Chiudi appena finito.",
+    "copyAuto": "Copia (auto-cancella)",
+    "clipboardHint": "Appunti: cancellazione automatica tra ~30s."
+  }
+}

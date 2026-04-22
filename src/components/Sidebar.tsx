@@ -1,10 +1,9 @@
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import type { NavId } from "../types";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
-const items: { id: NavId; label: string; description: string }[] = [
-  { id: "home", label: "Home", description: "Panoramica" },
-  { id: "explore", label: "Esplora", description: "Aggiungi servizi" },
-  { id: "services", label: "I miei servizi", description: "Collegati" },
-];
+type NavItem = { id: NavId; label: string; description: string };
 
 type Props = {
   active: NavId;
@@ -27,6 +26,17 @@ export function Sidebar({
   onLockVault,
   onOpenChangePin,
 }: Props) {
+  const { t } = useTranslation();
+
+  const items: NavItem[] = useMemo(
+    () => [
+      { id: "home", label: t("sidebar.navHome"), description: t("sidebar.navHomeDesc") },
+      { id: "explore", label: t("sidebar.navExplore"), description: t("sidebar.navExploreDesc") },
+      { id: "services", label: t("sidebar.navServices"), description: t("sidebar.navServicesDesc") },
+    ],
+    [t],
+  );
+
   return (
     <aside className="flex w-56 shrink-0 flex-col border-r border-surface-3/80 bg-surface-1">
       <div className="border-b border-surface-3/80 px-5 py-6">
@@ -36,7 +46,7 @@ export function Sidebar({
           </span>
           <div>
             <p className="text-sm font-semibold tracking-tight text-ink">Rotate</p>
-            <p className="text-xs text-ink-muted">Chiavi in un solo posto</p>
+            <p className="text-xs text-ink-muted">{t("sidebar.tagline")}</p>
           </div>
         </div>
       </div>
@@ -76,7 +86,7 @@ export function Sidebar({
         <div className="border-t border-surface-3/80 px-3 py-2">
           <div className="flex items-center justify-between gap-2 rounded-lg bg-surface-0/80 px-2 py-1.5">
             <span className="text-[10px] text-ink-muted">
-              Sessione
+              {t("sidebar.session")}
               {sessionMinutesRemaining != null ? (
                 <span className="ml-1 font-mono text-accent">~{sessionMinutesRemaining}m</span>
               ) : null}
@@ -87,27 +97,27 @@ export function Sidebar({
                 onClick={onOpenChangePin}
                 className="rounded px-1.5 py-0.5 text-[10px] text-ink-muted hover:text-accent"
               >
-                PIN
+                {t("sidebar.pin")}
               </button>
               <button
                 type="button"
                 onClick={onLockVault}
                 className="rounded bg-surface-3/80 px-2 py-0.5 text-[10px] font-medium text-ink hover:bg-rose-500/20 hover:text-rose-200"
               >
-                Blocca
+                {t("sidebar.lock")}
               </button>
             </div>
           </div>
         </div>
       ) : null}
       <div className="border-t border-surface-3/80 px-4 py-3 text-[11px] leading-relaxed text-ink-muted">
+        <div className="mb-3">
+          <LanguageSwitcher />
+        </div>
         <p className="mb-2 rounded-md bg-surface-0/80 px-2 py-1.5 font-mono text-[10px] text-accent/90">
           {backendHint}
         </p>
-        <p>
-          Vault: hash PIN in DB locale, sessione in memoria. Token provider nel portachiavi OS. CSP
-          restrittiva in produzione.
-        </p>
+        <p>{t("sidebar.footerHint")}</p>
       </div>
     </aside>
   );

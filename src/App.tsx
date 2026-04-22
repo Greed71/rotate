@@ -1,22 +1,18 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CloudflareDetail } from "./components/CloudflareDetail";
 import { ExploreView } from "./components/ExploreView";
 import { HomeView } from "./components/HomeView";
 import { ServicePlaceholderDetail } from "./components/ServicePlaceholderDetail";
 import { ServicesView } from "./components/ServicesView";
+import { LanguageSwitcher } from "./components/LanguageSwitcher";
 import { Sidebar } from "./components/Sidebar";
 import { ChangePinModal } from "./components/vault/ChangePinModal";
 import { PinSetupScreen } from "./components/vault/PinSetupScreen";
 import { UnlockScreen } from "./components/vault/UnlockScreen";
 import type { Integration, IntegrationDto, NavId, ProviderId, SecurityStatusDto } from "./types";
 import { integrationFromDto } from "./types";
-
-const defaultLabel: Record<ProviderId, string> = {
-  cloudflare: "Account Cloudflare",
-  supabase: "Progetto Supabase",
-  oauth_google: "OAuth Google",
-};
 
 async function loadIntegrationsFromDisk(): Promise<Integration[]> {
   const rows = await invoke<IntegrationDto[]>("integrations_list");
@@ -35,9 +31,10 @@ function MainShell(props: {
   onOpenChangePin: () => void;
 }) {
   const { vault, onVaultUpdated, onOpenChangePin } = props;
+  const { t } = useTranslation();
   const [nav, setNav] = useState<NavId>("home");
   const [integrations, setIntegrations] = useState<Integration[]>([]);
-  const [backendHint, setBackendHint] = useState<string>("Connessione al backend…");
+  const [backendHint, setBackendHint] = useState(() => t("app.backendConnecting"));
   const [openedService, setOpenedService] = useState<Integration | null>(null);
 
   const handleNavigate = useCallback((id: NavId) => {
@@ -61,16 +58,13 @@ function MainShell(props: {
         const line = await invoke<string>("platform_blurb");
         if (!cancelled) setBackendHint(line);
       } catch {
-        if (!cancelled)
-          setBackendHint(
-            "Solo browser (npm run dev): nessun processo Rust. Per il backend usa npm run desktop.",
-          );
+        if (!cancelled) setBackendHint(t("app.browserOnlyBackend"));
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -104,7 +98,7 @@ function MainShell(props: {
       try {
         const row = await invoke<IntegrationDto>("integrations_add", {
           provider,
-          label: defaultLabel[provider],
+          label: t(`providers.${provider}.defaultLabel`),
         });
         setIntegrations((prev) => [...prev, integrationFromDto(row)]);
         setNav("services");
@@ -118,7 +112,7 @@ function MainShell(props: {
         }
       }
     },
-    [integrations],
+    [integrations, t],
   );
 
   const lockVault = useCallback(async () => {
@@ -177,6 +171,7 @@ function MainShell(props: {
 }
 
 function App() {
+  const { t } = useTranslation();
   const [vault, setVault] = useState<SecurityStatusDto | null>(null);
   const [vaultLoadError, setVaultLoadError] = useState<string | null>(null);
   const [changePinOpen, setChangePinOpen] = useState(false);
@@ -198,16 +193,22 @@ function App() {
 
   if (vaultLoadError && vault === null) {
     return (
-      <div className="flex h-full items-center justify-center bg-surface-0 px-6 text-center text-sm text-rose-200">
-        Vault non disponibile: {vaultLoadError}
+      <div className="relative flex h-full flex-col items-center justify-center bg-surface-0 px-6 text-center text-sm text-rose-200">
+        <div className="absolute right-4 top-4 z-10 sm:right-6 sm:top-6">
+          <LanguageSwitcher />
+        </div>
+        {t("app.vaultUnavailable", { error: vaultLoadError })}
       </div>
     );
   }
 
   if (!vault) {
     return (
-      <div className="flex h-full items-center justify-center bg-surface-0 text-ink-muted">
-        Inizializzazione vault…
+      <div className="relative flex h-full flex-col items-center justify-center bg-surface-0 text-ink-muted">
+        <div className="absolute right-4 top-4 z-10 sm:right-6 sm:top-6">
+          <LanguageSwitcher />
+        </div>
+        {t("app.vaultInit")}
       </div>
     );
   }

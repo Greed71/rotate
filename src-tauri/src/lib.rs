@@ -1,4 +1,4 @@
-//! Rotate — backend Tauri (comandi IPC verso il frontend).
+//! Rotate - backend Tauri (comandi IPC verso il frontend).
 
 mod cf_api;
 mod db;

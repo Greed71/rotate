@@ -5,11 +5,11 @@
 ![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-A **local-first** desktop app built with **Tauri 2**, **React 19**, and **Rust** to keep API keys and provider integrations in one place — guarded by a vault PIN, with **selective** automation (e.g. Cloudflare token rotation) instead of “rotate everything at once.”
+A **local-first** desktop app built with **Tauri 2**, **React 19**, and **Rust** to keep API keys and provider integrations in one place - guarded by a vault PIN, with **selective** automation (e.g. Cloudflare token rotation) instead of “rotate everything at once.”
 
 Meant for developers who want a small native utility on disk: metadata in SQLite, provider secrets in the OS keyring, and a time-boxed unlock session in RAM.
 
-> **Try it:** after `npm install`, run `npm run desktop` — Vite serves the UI and Tauri opens the window. The interface is **Italian**; the README is in English for GitHub.
+> **Try it:** after `npm install`, run `npm run desktop` - Vite serves the UI and Tauri opens the window. The interface is **Italian**; the README is in English for GitHub.
 
 ---
 
@@ -24,13 +24,13 @@ Meant for developers who want a small native utility on disk: metadata in SQLite
 
 ## Why Tauri (and Rust) instead of Electron?
 
-Electron ships a full Chromium runtime per app — larger downloads and a heavier memory footprint. Tauri uses the system webview and runs privileged logic in **Rust**, which fits IPC commands, SQLite, HTTP to Cloudflare, and keyring access without bundling Node on the desktop. For a security-adjacent tool, that boundary is easier to reason about than a large JS main process.
+Electron ships a full Chromium runtime per app - larger downloads and a heavier memory footprint. Tauri uses the system webview and runs privileged logic in **Rust**, which fits IPC commands, SQLite, HTTP to Cloudflare, and keyring access without bundling Node on the desktop. For a security-adjacent tool, that boundary is easier to reason about than a large JS main process.
 
 ---
 
 ## Why store the PIN hash in SQLite (and not the OS keyring)?
 
-Provider tokens still use the **OS credential store** (e.g. Windows Credential Manager). The vault PIN hash lives in SQLite because on some Windows setups `set_password` on the keyring can **block indefinitely** without returning an error, which made first-time vault setup appear “stuck.” The PIN is never stored in plaintext — only an Argon2id PHC string in the `vault_settings` table.
+Provider tokens still use the **OS credential store** (e.g. Windows Credential Manager). The vault PIN hash lives in SQLite because on some Windows setups `set_password` on the keyring can **block indefinitely** without returning an error, which made first-time vault setup appear “stuck.” The PIN is never stored in plaintext - only an Argon2id PHC string in the `vault_settings` table.
 
 ---
 
@@ -48,7 +48,7 @@ rotate/
 │   │   └── cf_api.rs       Cloudflare API v4 (verify, list, detail, create, delete)
 │   ├── capabilities/         ACL allow-list for each IPC command
 │   └── tauri.conf.json       window, CSP, bundle options
-├── scripts/                  run-desktop*.mjs — prepends Cargo to PATH on Windows
+├── scripts/                  run-desktop*.mjs - prepends Cargo to PATH on Windows
 └── package.json
 ```
 
@@ -82,10 +82,10 @@ npm install
 
 # 2. Install Rust if needed: https://rustup.rs/
 
-# 3. Desktop app (Vite + Tauri — recommended)
+# 3. Desktop app (Vite + Tauri - recommended)
 npm run desktop
 
-# 4. Frontend only (no Rust IPC — UI prototyping)
+# 4. Frontend only (no Rust IPC - UI prototyping)
 npm run dev
 ```
 
@@ -122,7 +122,7 @@ Do not commit `rotate.db`, `.env` files with secrets, or API tokens.
 ## References
 
 - [Tauri v2 documentation](https://v2.tauri.app/)
-- [Cloudflare API v4 — Account API Tokens](https://developers.cloudflare.com/api/)
+- [Cloudflare API v4 - Account API Tokens](https://developers.cloudflare.com/api/)
 
 ---
 

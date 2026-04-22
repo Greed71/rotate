@@ -195,7 +195,7 @@ pub fn build_token_create_body(detail: &Value, new_name: &str) -> Result<Value, 
     Ok(Value::Object(body))
 }
 
-/// Crea token; restituisce `(id, secret)` — il secret è mostrato solo in questa risposta.
+/// Crea token; restituisce `(id, secret)` - il secret è mostrato solo in questa risposta.
 pub fn create_account_token(
     mgmt_token: &str,
     account_id: &str,

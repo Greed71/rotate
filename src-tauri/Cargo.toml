@@ -1,7 +1,7 @@
 [package]
 name = "rotate"
 version = "0.1.0"
-description = "Rotate — gestione centralizzata delle chiavi API"
+description = "Rotate - gestione centralizzata delle chiavi API"
 authors = ["you"]
 edition = "2021"
 

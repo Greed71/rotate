@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import type { AutomationLevel, Integration, ProviderId } from "../types";
 
 type CatalogEntry = {
@@ -8,60 +10,66 @@ type CatalogEntry = {
   envHints: string[];
 };
 
-const catalog: CatalogEntry[] = [
-  {
-    id: "cloudflare",
-    name: "Cloudflare",
-    blurb: "API Token e permessi account. Adatto alla rigenerazione guidata.",
-    automation: "full",
-    envHints: ["CLOUDFLARE_API_TOKEN", "CF_ACCOUNT_ID"],
-  },
-  {
-    id: "supabase",
-    name: "Supabase",
-    blurb: "Chiavi di progetto e segreti legati al tenant. Alcune operazioni via API.",
-    automation: "partial",
-    envHints: ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"],
-  },
-  {
-    id: "oauth_google",
-    name: "OAuth (Google)",
-    blurb: "Client ID/secret OAuth. Spesso richiede passaggi in Google Cloud Console.",
-    automation: "partial",
-    envHints: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
-  },
-];
-
-const automationCopy: Record<AutomationLevel, { label: string; className: string }> = {
-  full: { label: "Automazione alta", className: "bg-emerald-500/15 text-emerald-300" },
-  partial: {
-    label: "Semi-automatico",
-    className: "bg-amber-500/15 text-amber-200",
-  },
-  manual: { label: "Manuale", className: "bg-rose-500/15 text-rose-200" },
-};
-
 type Props = {
   integrations: Integration[];
   onAdd: (provider: ProviderId) => void | Promise<void>;
 };
 
 export function ExploreView({ integrations, onAdd }: Props) {
+  const { t } = useTranslation();
   const connected = new Set(integrations.map((i) => i.provider));
+
+  const catalog = useMemo<CatalogEntry[]>(
+    () => [
+      {
+        id: "cloudflare",
+        name: t("providers.cloudflare.title"),
+        blurb: t("providers.cloudflare.blurb"),
+        automation: "full",
+        envHints: ["CLOUDFLARE_API_TOKEN", "CF_ACCOUNT_ID"],
+      },
+      {
+        id: "supabase",
+        name: t("providers.supabase.title"),
+        blurb: t("providers.supabase.blurb"),
+        automation: "partial",
+        envHints: ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"],
+      },
+      {
+        id: "oauth_google",
+        name: t("providers.oauth_google.title"),
+        blurb: t("providers.oauth_google.blurb"),
+        automation: "partial",
+        envHints: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
+      },
+    ],
+    [t],
+  );
+
+  const automationCopy = useMemo(
+    () =>
+      ({
+        full: { label: t("automation.full"), className: "bg-emerald-500/15 text-emerald-300" },
+        partial: {
+          label: t("automation.partial"),
+          className: "bg-amber-500/15 text-amber-200",
+        },
+        manual: { label: t("automation.manual"), className: "bg-rose-500/15 text-rose-200" },
+      }) satisfies Record<
+        AutomationLevel,
+        { label: string; className: string }
+      >,
+    [t],
+  );
 
   return (
     <div className="flex flex-1 flex-col gap-8 overflow-auto px-10 py-10">
       <header className="max-w-3xl space-y-2">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
-          Esplora
+          {t("explore.kicker")}
         </p>
-        <h1 className="text-3xl font-semibold tracking-tight text-ink">
-          Scegli cosa vuoi poter ruotare
-        </h1>
-        <p className="text-sm leading-relaxed text-ink-muted">
-          Aggiungi solo i provider che usi. La rotazione sarà sempre{" "}
-          <span className="text-ink">per singola risorsa</span>, mai globale.
-        </p>
+        <h1 className="text-3xl font-semibold tracking-tight text-ink">{t("explore.title")}</h1>
+        <p className="text-sm leading-relaxed text-ink-muted">{t("explore.subtitle")}</p>
       </header>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -84,14 +92,14 @@ export function ExploreView({ integrations, onAdd }: Props) {
                 </div>
                 {isAdded ? (
                   <span className="rounded-full bg-surface-3 px-2.5 py-1 text-[11px] font-medium text-ink-muted">
-                    Aggiunto
+                    {t("explore.added")}
                   </span>
                 ) : null}
               </div>
               <p className="mt-4 text-sm leading-relaxed text-ink-muted">{item.blurb}</p>
               <div className="mt-4 space-y-1.5">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
-                  Esempi .env
+                  {t("explore.envExamples")}
                 </p>
                 <ul className="flex flex-wrap gap-1.5">
                   {item.envHints.map((hint) => (
@@ -111,7 +119,7 @@ export function ExploreView({ integrations, onAdd }: Props) {
                   onClick={() => onAdd(item.id)}
                   className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-surface-0 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  {isAdded ? "Già nel pool" : "Aggiungi"}
+                  {isAdded ? t("explore.inPool") : t("explore.add")}
                 </button>
               </div>
             </article>
