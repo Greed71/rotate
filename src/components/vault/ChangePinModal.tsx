@@ -25,10 +25,20 @@ export function ChangePinModal({ open, onClose, onSuccess }: Props) {
 
   if (!open) return null;
 
+  function passwordLooksStrong(value: string) {
+    const classes = [
+      /[a-z]/.test(value),
+      /[A-Z]/.test(value),
+      /\d/.test(value),
+      /[^A-Za-z0-9]/.test(value),
+    ].filter(Boolean).length;
+    return value.length >= 16 || (value.length >= VAULT_MIN_PIN_LENGTH && classes >= 3);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (newPin.length < VAULT_MIN_PIN_LENGTH) {
+    if (newPin.length < VAULT_MIN_PIN_LENGTH || !passwordLooksStrong(newPin)) {
       setError(t("changePin.newMin", { min: VAULT_MIN_PIN_LENGTH }));
       return;
     }

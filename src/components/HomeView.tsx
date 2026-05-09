@@ -4,9 +4,10 @@ import type { Integration } from "../types";
 type Props = {
   integrations: Integration[];
   onGoExplore: () => void;
+  onOpenIntegration: (integration: Integration) => void;
 };
 
-export function HomeView({ integrations, onGoExplore }: Props) {
+export function HomeView({ integrations, onGoExplore, onOpenIntegration }: Props) {
   const { t } = useTranslation();
   const isEmpty = integrations.length === 0;
 
@@ -42,7 +43,8 @@ export function HomeView({ integrations, onGoExplore }: Props) {
         {integrations.map((item) => (
           <li
             key={item.id}
-            className="rounded-2xl border border-surface-3/80 bg-surface-1/80 px-5 py-4"
+            className="cursor-pointer rounded-2xl border border-surface-3/80 bg-surface-1/80 px-5 py-4 transition hover:border-accent/40 hover:bg-surface-2/50"
+            onClick={() => onOpenIntegration(item)}
           >
             <p className="text-sm font-semibold text-ink">{item.label}</p>
             <p className="text-xs uppercase tracking-wide text-ink-muted">

@@ -14,12 +14,18 @@
     "allow-security-unlock",
     "allow-security-lock",
     "allow-security-change-pin",
+    "allow-security-set-session-ttl",
     "allow-integrations-list",
     "allow-integrations-add",
     "allow-cloudflare-link",
     "allow-cloudflare-status",
+    "allow-cloudflare-secret-storage-diagnostics",
     "allow-cloudflare-list-tokens",
+    "allow-cloudflare-list-turnstile-widgets",
+    "allow-cloudflare-rotate-turnstile-secret",
     "allow-cloudflare-reveal-managed-token",
+    "allow-cloudflare-managed-secrets-list",
+    "allow-cloudflare-track-managed-secret",
     "allow-cloudflare-rotate-account-token",
     "allow-cloudflare-unlink"
   ]

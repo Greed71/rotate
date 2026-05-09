@@ -5,13 +5,20 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
 
 type NavItem = { id: NavId; label: string; description: string };
 
+function formatSessionMmSs(totalSeconds: number): string {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${m}:${sec.toString().padStart(2, "0")}`;
+}
+
 type Props = {
   active: NavId;
   onNavigate: (id: NavId) => void;
   serviceCount: number;
   backendHint: string;
   vaultUnlocked: boolean;
-  sessionMinutesRemaining: number | null;
+  sessionSecondsRemaining: number | null;
   onLockVault: () => void;
   onOpenChangePin: () => void;
 };
@@ -22,7 +29,7 @@ export function Sidebar({
   serviceCount,
   backendHint,
   vaultUnlocked,
-  sessionMinutesRemaining,
+  sessionSecondsRemaining,
   onLockVault,
   onOpenChangePin,
 }: Props) {
@@ -33,6 +40,7 @@ export function Sidebar({
       { id: "home", label: t("sidebar.navHome"), description: t("sidebar.navHomeDesc") },
       { id: "explore", label: t("sidebar.navExplore"), description: t("sidebar.navExploreDesc") },
       { id: "services", label: t("sidebar.navServices"), description: t("sidebar.navServicesDesc") },
+      { id: "settings", label: t("sidebar.navSettings"), description: t("sidebar.navSettingsDesc") },
     ],
     [t],
   );
@@ -87,8 +95,10 @@ export function Sidebar({
           <div className="flex items-center justify-between gap-2 rounded-lg bg-surface-0/80 px-2 py-1.5">
             <span className="text-[10px] text-ink-muted">
               {t("sidebar.session")}
-              {sessionMinutesRemaining != null ? (
-                <span className="ml-1 font-mono text-accent">~{sessionMinutesRemaining}m</span>
+              {sessionSecondsRemaining != null ? (
+                <span className="ml-1 font-mono text-accent tabular-nums">
+                  {formatSessionMmSs(sessionSecondsRemaining)}
+                </span>
               ) : null}
             </span>
             <div className="flex gap-1">

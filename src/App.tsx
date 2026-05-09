@@ -1,11 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CloudflareDetail } from "./components/CloudflareDetail";
 import { ExploreView } from "./components/ExploreView";
 import { HomeView } from "./components/HomeView";
 import { ServicePlaceholderDetail } from "./components/ServicePlaceholderDetail";
 import { ServicesView } from "./components/ServicesView";
+import { SettingsView } from "./components/SettingsView";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
 import { Sidebar } from "./components/Sidebar";
 import { ChangePinModal } from "./components/vault/ChangePinModal";
@@ -36,10 +37,12 @@ function MainShell(props: {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [backendHint, setBackendHint] = useState(() => t("app.backendConnecting"));
   const [openedService, setOpenedService] = useState<Integration | null>(null);
+  const [displaySessionSeconds, setDisplaySessionSeconds] = useState<number | null>(null);
+  const sessionTickRef = useRef<number | null>(null);
 
   const handleNavigate = useCallback((id: NavId) => {
     setNav(id);
-    if (id === "services") setOpenedService(null);
+    if (id === "services" || id === "settings") setOpenedService(null);
   }, []);
 
   const refreshVault = useCallback(async () => {
@@ -50,6 +53,33 @@ function MainShell(props: {
       /* ignore */
     }
   }, [onVaultUpdated]);
+
+  useEffect(() => {
+    if (!vault.unlocked || vault.sessionSecondsRemaining == null) {
+      sessionTickRef.current = null;
+      setDisplaySessionSeconds(null);
+      return;
+    }
+    sessionTickRef.current = vault.sessionSecondsRemaining;
+    setDisplaySessionSeconds(vault.sessionSecondsRemaining);
+  }, [vault.unlocked, vault.sessionSecondsRemaining]);
+
+  useEffect(() => {
+    if (!vault.unlocked) return;
+    const id = window.setInterval(() => {
+      const r = sessionTickRef.current;
+      if (r == null || r <= 0) return;
+      sessionTickRef.current = r - 1;
+      setDisplaySessionSeconds(r - 1);
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [vault.unlocked]);
+
+  useEffect(() => {
+    if (displaySessionSeconds === 0 && vault.unlocked) {
+      void refreshVault();
+    }
+  }, [displaySessionSeconds, vault.unlocked, refreshVault]);
 
   useEffect(() => {
     let cancelled = false;
@@ -126,10 +156,10 @@ function MainShell(props: {
 
   const closeServiceDetail = useCallback(() => setOpenedService(null), []);
 
-  const sessionMinutes =
-    vault.sessionSecondsRemaining != null
-      ? Math.max(0, Math.ceil(vault.sessionSecondsRemaining / 60))
-      : null;
+  const openServiceDetail = useCallback((integration: Integration) => {
+    setOpenedService(integration);
+    setNav("services");
+  }, []);
 
   return (
     <div className="flex h-full bg-surface-0 text-ink">
@@ -139,13 +169,17 @@ function MainShell(props: {
         serviceCount={integrations.length}
         backendHint={backendHint}
         vaultUnlocked={vault.unlocked}
-        sessionMinutesRemaining={sessionMinutes}
+        sessionSecondsRemaining={displaySessionSeconds}
         onLockVault={() => void lockVault()}
         onOpenChangePin={onOpenChangePin}
       />
       <main className="flex min-w-0 flex-1 flex-col bg-gradient-to-br from-surface-0 via-surface-0 to-surface-1">
         {nav === "home" ? (
-          <HomeView integrations={integrations} onGoExplore={() => setNav("explore")} />
+          <HomeView
+            integrations={integrations}
+            onGoExplore={() => setNav("explore")}
+            onOpenIntegration={openServiceDetail}
+          />
         ) : null}
         {nav === "explore" ? (
           <ExploreView integrations={integrations} onAdd={handleAdd} />
@@ -164,6 +198,9 @@ function MainShell(props: {
               onOpenIntegration={setOpenedService}
             />
           )
+        ) : null}
+        {nav === "settings" ? (
+          <SettingsView sessionTtlSeconds={vault.sessionTtlSeconds} onVaultUpdated={onVaultUpdated} />
         ) : null}
       </main>
     </div>

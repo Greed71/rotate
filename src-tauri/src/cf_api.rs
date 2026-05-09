@@ -1,6 +1,7 @@
-//! Client minimale per Cloudflare API v4 (verifica token, account, elenco API token, rotazione).
+//! Client minimale per Cloudflare API v4.
 
-use reqwest::blocking::Client;
+use reqwest::blocking::{Client, RequestBuilder};
+use reqwest::header::{HeaderValue, AUTHORIZATION};
 use serde::Serialize;
 use serde_json::{json, Map, Value};
 
@@ -14,32 +15,68 @@ fn http() -> Client {
 }
 
 fn cf_error_message(body: &Value) -> String {
-    body.get("errors")
+    let message = body
+        .get("errors")
         .and_then(|e| e.as_array())
         .and_then(|a| a.first())
         .and_then(|o| o.get("message"))
         .and_then(|m| m.as_str())
-        .map(|s| s.to_string())
-        .unwrap_or_else(|| "Errore API Cloudflare.".into())
+        .unwrap_or("Errore API Cloudflare.");
+    let code = body
+        .get("errors")
+        .and_then(|e| e.as_array())
+        .and_then(|a| a.first())
+        .and_then(|o| o.get("code"))
+        .and_then(|m| m.as_i64());
+    match code {
+        Some(code) => format!("{message} (Cloudflare code {code})"),
+        None => message.to_string(),
+    }
 }
 
-pub fn verify_api_token(token: &str) -> Result<(), String> {
-    let r = http()
-        .get(format!("{BASE}/user/tokens/verify"))
-        .header("Authorization", format!("Bearer {token}"))
+fn normalize_api_token(token: &str) -> Result<String, String> {
+    let mut value = token.trim().trim_matches('\u{feff}').trim();
+    if value.len() >= 7 && value[..7].eq_ignore_ascii_case("bearer ") {
+        value = value[7..].trim();
+    }
+    value = value.trim_matches('"').trim_matches('\'').trim();
+
+    if value.is_empty() {
+        return Err("API token Cloudflare mancante.".into());
+    }
+    if value.chars().any(|c| c.is_control() || c.is_whitespace()) {
+        return Err(
+            "Il token Cloudflare contiene spazi, ritorni a capo o caratteri invisibili. Incolla solo il valore del token, senza prefisso Bearer.".into(),
+        );
+    }
+
+    Ok(value.to_string())
+}
+
+fn with_bearer(builder: RequestBuilder, token: &str) -> Result<RequestBuilder, String> {
+    let token = normalize_api_token(token)?;
+    let value = HeaderValue::from_str(&format!("Bearer {token}"))
+        .map_err(|_| "Il token Cloudflare non puo essere usato in un header HTTP valido.".to_string())?;
+    Ok(builder.header(AUTHORIZATION, value))
+}
+
+pub fn verify_api_token(token: &str) -> Result<Option<String>, String> {
+    let r = with_bearer(http().get(format!("{BASE}/user/tokens/verify")), token)?
         .send()
         .map_err(|e| e.to_string())?;
     let body: Value = r.json().map_err(|e| e.to_string())?;
     if !body.get("success").and_then(|v| v.as_bool()).unwrap_or(false) {
         return Err(cf_error_message(&body));
     }
-    Ok(())
+    Ok(body
+        .get("result")
+        .and_then(|r| r.get("id"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string()))
 }
 
 pub fn verify_account(token: &str, account_id: &str) -> Result<(), String> {
-    let r = http()
-        .get(format!("{BASE}/accounts/{account_id}"))
-        .header("Authorization", format!("Bearer {token}"))
+    let r = with_bearer(http().get(format!("{BASE}/accounts/{account_id}")), token)?
         .send()
         .map_err(|e| e.to_string())?;
     let body: Value = r.json().map_err(|e| e.to_string())?;
@@ -59,9 +96,7 @@ pub struct CfTokenRow {
 }
 
 pub fn list_account_tokens(token: &str, account_id: &str) -> Result<Vec<CfTokenRow>, String> {
-    let r = http()
-        .get(format!("{BASE}/accounts/{account_id}/tokens"))
-        .header("Authorization", format!("Bearer {token}"))
+    let r = with_bearer(http().get(format!("{BASE}/accounts/{account_id}/tokens")), token)?
         .send()
         .map_err(|e| e.to_string())?;
     let body: Value = r.json().map_err(|e| e.to_string())?;
@@ -91,15 +126,13 @@ pub fn list_account_tokens(token: &str, account_id: &str) -> Result<Vec<CfTokenR
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .to_string();
-        let expires_on = item
-            .get("expires_on")
-            .and_then(|v| {
-                if v.is_null() {
-                    None
-                } else {
-                    v.as_str().map(|s| s.to_string())
-                }
-            });
+        let expires_on = item.get("expires_on").and_then(|v| {
+            if v.is_null() {
+                None
+            } else {
+                v.as_str().map(|s| s.to_string())
+            }
+        });
         out.push(CfTokenRow {
             id,
             name,
@@ -110,15 +143,15 @@ pub fn list_account_tokens(token: &str, account_id: &str) -> Result<Vec<CfTokenR
     Ok(out)
 }
 
-/// Dettaglio token (policies, condition, …) per clonare in un nuovo token.
 pub fn get_account_token_detail(
     mgmt_token: &str,
     account_id: &str,
     token_id: &str,
 ) -> Result<Value, String> {
-    let r = http()
-        .get(format!("{BASE}/accounts/{account_id}/tokens/{token_id}"))
-        .header("Authorization", format!("Bearer {mgmt_token}"))
+    let r = with_bearer(
+        http().get(format!("{BASE}/accounts/{account_id}/tokens/{token_id}")),
+        mgmt_token,
+    )?
         .send()
         .map_err(|e| e.to_string())?;
     let body: Value = r.json().map_err(|e| e.to_string())?;
@@ -141,7 +174,7 @@ fn strip_policy_for_create(policy: &Value) -> Result<Value, String> {
         .ok_or_else(|| "Policy senza permission_groups.".to_string())?;
     let groups = groups_val
         .as_array()
-        .ok_or_else(|| "permission_groups non è un array.".to_string())?;
+        .ok_or_else(|| "permission_groups non e un array.".to_string())?;
     let mut new_groups = Vec::new();
     for g in groups {
         let go = g
@@ -161,7 +194,6 @@ fn strip_policy_for_create(policy: &Value) -> Result<Value, String> {
     Ok(Value::Object(obj))
 }
 
-/// Corpo `POST /tokens` derivato dal GET dettaglio (stesse policy / vincoli).
 pub fn build_token_create_body(detail: &Value, new_name: &str) -> Result<Value, String> {
     let policies = detail
         .get("policies")
@@ -195,15 +227,15 @@ pub fn build_token_create_body(detail: &Value, new_name: &str) -> Result<Value, 
     Ok(Value::Object(body))
 }
 
-/// Crea token; restituisce `(id, secret)` - il secret è mostrato solo in questa risposta.
 pub fn create_account_token(
     mgmt_token: &str,
     account_id: &str,
     body: &Value,
 ) -> Result<(String, String), String> {
-    let r = http()
-        .post(format!("{BASE}/accounts/{account_id}/tokens"))
-        .header("Authorization", format!("Bearer {mgmt_token}"))
+    let r = with_bearer(
+        http().post(format!("{BASE}/accounts/{account_id}/tokens")),
+        mgmt_token,
+    )?
         .header("Content-Type", "application/json")
         .json(body)
         .send()
@@ -224,7 +256,7 @@ pub fn create_account_token(
         .get("value")
         .and_then(|v| v.as_str())
         .ok_or_else(|| {
-            "Cloudflare non ha restituito il valore del nuovo token. Controlla i permessi (Account · API Tokens · Edit)."
+            "Cloudflare non ha restituito il valore del nuovo token. Controlla i permessi Account API Tokens Edit."
                 .to_string()
         })?
         .to_string();
@@ -232,9 +264,10 @@ pub fn create_account_token(
 }
 
 pub fn delete_account_token(mgmt_token: &str, account_id: &str, token_id: &str) -> Result<(), String> {
-    let r = http()
-        .delete(format!("{BASE}/accounts/{account_id}/tokens/{token_id}"))
-        .header("Authorization", format!("Bearer {mgmt_token}"))
+    let r = with_bearer(
+        http().delete(format!("{BASE}/accounts/{account_id}/tokens/{token_id}")),
+        mgmt_token,
+    )?
         .send()
         .map_err(|e| e.to_string())?;
     let body: Value = r.json().map_err(|e| e.to_string())?;
@@ -242,4 +275,133 @@ pub fn delete_account_token(mgmt_token: &str, account_id: &str, token_id: &str) 
         return Err(cf_error_message(&body));
     }
     Ok(())
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnstileWidgetRow {
+    pub sitekey: String,
+    pub name: String,
+    pub mode: String,
+    pub domains: Vec<String>,
+    pub modified_on: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnstileRotateResult {
+    pub sitekey: String,
+    pub name: String,
+    pub secret: String,
+}
+
+pub fn list_turnstile_widgets(token: &str, account_id: &str) -> Result<Vec<TurnstileWidgetRow>, String> {
+    let r = with_bearer(
+        http().get(format!("{BASE}/accounts/{account_id}/challenges/widgets")),
+        token,
+    )?
+    .send()
+    .map_err(|e| e.to_string())?;
+    let body: Value = r.json().map_err(|e| e.to_string())?;
+    if !body.get("success").and_then(|v| v.as_bool()).unwrap_or(false) {
+        return Err(cf_error_message(&body));
+    }
+    let Some(arr) = body.get("result").and_then(|v| v.as_array()) else {
+        return Ok(vec![]);
+    };
+    let mut out = Vec::new();
+    for item in arr {
+        let sitekey = item
+            .get("sitekey")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        if sitekey.is_empty() {
+            continue;
+        }
+        let name = item
+            .get("name")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Turnstile widget")
+            .to_string();
+        let mode = item
+            .get("mode")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let domains = item
+            .get("domains")
+            .and_then(|v| v.as_array())
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                    .collect()
+            })
+            .unwrap_or_default();
+        let modified_on = item
+            .get("modified_on")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        out.push(TurnstileWidgetRow {
+            sitekey,
+            name,
+            mode,
+            domains,
+            modified_on,
+        });
+    }
+    Ok(out)
+}
+
+pub fn rotate_turnstile_secret(
+    token: &str,
+    account_id: &str,
+    sitekey: &str,
+    invalidate_immediately: bool,
+) -> Result<TurnstileRotateResult, String> {
+    let body = json!({ "invalidate_immediately": invalidate_immediately });
+    let r = with_bearer(
+        http().post(format!(
+            "{BASE}/accounts/{account_id}/challenges/widgets/{sitekey}/rotate_secret"
+        )),
+        token,
+    )?
+    .json(&body)
+    .send()
+    .map_err(|e| e.to_string())?;
+    let resp: Value = r.json().map_err(|e| e.to_string())?;
+    if !resp.get("success").and_then(|v| v.as_bool()).unwrap_or(false) {
+        let msg = cf_error_message(&resp);
+        if msg.to_lowercase().contains("authentication") || msg.contains("Cloudflare code 10000") {
+            return Err(
+                "Cloudflare ha rifiutato la rotazione Turnstile: il token di gestione puo leggere il widget, ma non ha permessi di scrittura. Ricollega Cloudflare con Turnstile Sites Write oppure Account Settings Write."
+                    .into(),
+            );
+        }
+        return Err(msg);
+    }
+    let result = resp
+        .get("result")
+        .ok_or_else(|| "Risposta Turnstile senza result.".to_string())?;
+    let secret = result
+        .get("secret")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "Cloudflare non ha restituito il nuovo secret Turnstile.".to_string())?
+        .to_string();
+    let name = result
+        .get("name")
+        .and_then(|v| v.as_str())
+        .unwrap_or("Turnstile widget")
+        .to_string();
+    let sitekey = result
+        .get("sitekey")
+        .and_then(|v| v.as_str())
+        .unwrap_or(sitekey)
+        .to_string();
+    Ok(TurnstileRotateResult {
+        sitekey,
+        name,
+        secret,
+    })
 }

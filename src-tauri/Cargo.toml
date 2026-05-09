@@ -26,3 +26,4 @@ argon2 = "0.5"
 password-hash = "0.5"
 rand_core = { version = "0.6", features = ["getrandom"] }
 tauri-plugin-clipboard-manager = "2"
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Security_Cryptography"] }
