@@ -1,6 +1,6 @@
 export type NavId = "home" | "explore" | "services" | "settings";
 
-export type ProviderId = "cloudflare" | "supabase" | "oauth_google";
+export type ProviderId = "cloudflare" | "vercel" | "supabase" | "oauth_google";
 
 export type AutomationLevel = "full" | "partial" | "manual";
 
@@ -31,6 +31,86 @@ export function integrationFromDto(row: IntegrationDto): Integration {
 export type CloudflareStatusDto = {
   linked: boolean;
   accountId: string | null;
+};
+
+export type VercelStatusDto = {
+  linked: boolean;
+  userEmail: string | null;
+  teamId: string | null;
+};
+
+export type VercelProjectRow = {
+  id: string;
+  name: string;
+  framework: string | null;
+  updatedAt: number | null;
+  envKeys: string[];
+};
+
+export type VercelEnvVarRow = {
+  id: string;
+  key: string;
+  kind: string;
+  targets: string[];
+  updatedAt: number | null;
+};
+
+export type VercelEnvUpsertResult = {
+  key: string;
+  projectId: string;
+  projectName: string;
+  targets: string[];
+  kind: string;
+};
+
+export type SupabaseStatusDto = {
+  linked: boolean;
+};
+
+export type SupabaseProjectRow = {
+  id: string;
+  reference: string;
+  name: string;
+  organizationId: string | null;
+  organizationSlug: string | null;
+  region: string | null;
+  status: string | null;
+  createdAt: string | null;
+};
+
+export type SupabaseSecretRow = {
+  name: string;
+  updatedAt: string | null;
+};
+
+export type SupabaseSecretUpsertResult = {
+  projectRef: string;
+  projectName: string;
+  name: string;
+};
+
+export type SupabaseApiKeyRow = {
+  id: string;
+  keyType: string;
+  prefix: string | null;
+  name: string;
+  description: string | null;
+  insertedAt: string | null;
+  updatedAt: string | null;
+};
+
+export type SupabaseApiKeyRotateResult = {
+  oldKeyId: string;
+  newKeyId: string;
+  keyType: string;
+  name: string;
+  apiKey: string;
+  deletedOld: boolean;
+};
+
+export type SupabaseDatabasePasswordRotateResult = {
+  projectRef: string;
+  password: string;
 };
 
 export type SecretStorageDiagnosticsDto = {
@@ -87,6 +167,62 @@ export type TurnstileRotateResult = {
   sitekey: string;
   name: string;
   secret: string;
+};
+
+export type WorkerScriptRow = {
+  id: string;
+  createdOn: string | null;
+  modifiedOn: string | null;
+};
+
+export type WorkerSecretRow = {
+  name: string;
+  kind: string;
+};
+
+export type AccessServiceTokenRow = {
+  id: string;
+  name: string;
+  clientId: string;
+  duration: string | null;
+  expiresAt: string | null;
+};
+
+export type AccessServiceTokenRotateResult = {
+  id: string;
+  name: string;
+  clientId: string;
+  clientSecret: string;
+  duration: string | null;
+};
+
+export type PagesEnvVarRow = {
+  name: string;
+  kind: string;
+};
+
+export type PagesProjectRow = {
+  id: string;
+  name: string;
+  productionBranch: string | null;
+  productionEnvVars: PagesEnvVarRow[];
+  previewEnvVars: PagesEnvVarRow[];
+};
+
+export type SecretsStoreRow = {
+  id: string;
+  name: string;
+  created: string | null;
+  modified: string | null;
+};
+
+export type SecretsStoreSecretRow = {
+  id: string;
+  name: string;
+  status: string;
+  storeId: string;
+  comment: string | null;
+  scopes: string[];
 };
 
 export type SecurityStatusDto = {

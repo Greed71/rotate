@@ -79,6 +79,11 @@
       "defaultLabel": "Cloudflare account",
       "blurb": "Link Account ID and management token: list tokens, rotate with the same policies, secrets stored securely."
     },
+    "vercel": {
+      "title": "Vercel",
+      "defaultLabel": "Vercel account",
+      "blurb": "Connect a Vercel token to update project environment variables after a rotation."
+    },
     "supabase": {
       "title": "Supabase",
       "defaultLabel": "Supabase project",

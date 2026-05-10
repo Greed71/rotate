@@ -29,6 +29,13 @@ export function ExploreView({ integrations, onAdd }: Props) {
         envHints: ["CLOUDFLARE_API_TOKEN", "CF_ACCOUNT_ID"],
       },
       {
+        id: "vercel",
+        name: t("providers.vercel.title"),
+        blurb: t("providers.vercel.blurb"),
+        automation: "partial",
+        envHints: ["VERCEL_TOKEN", "TURNSTILE_SECRET_KEY"],
+      },
+      {
         id: "supabase",
         name: t("providers.supabase.title"),
         blurb: t("providers.supabase.blurb"),

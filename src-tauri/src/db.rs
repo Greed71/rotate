@@ -30,6 +30,15 @@ pub struct ManagedSecretDto {
     pub last_rotated_at: Option<i64>,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VercelAccountDto {
+    pub integration_id: String,
+    pub user_id: String,
+    pub user_email: Option<String>,
+    pub team_id: Option<String>,
+}
+
 fn now_ms() -> Result<i64, String> {
     Ok(std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -62,6 +71,14 @@ fn migrate(conn: &Connection) -> Result<(), String> {
             integration_id TEXT PRIMARY KEY NOT NULL,
             account_id TEXT NOT NULL,
             management_token_id TEXT,
+            FOREIGN KEY (integration_id) REFERENCES integrations(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS vercel_accounts (
+            integration_id TEXT PRIMARY KEY NOT NULL,
+            user_id TEXT NOT NULL,
+            user_email TEXT,
+            team_id TEXT,
             FOREIGN KEY (integration_id) REFERENCES integrations(id) ON DELETE CASCADE
         );
 
@@ -155,7 +172,9 @@ pub fn get_session_ttl_seconds(app: &AppHandle) -> Result<u32, String> {
         .prepare("SELECT value FROM vault_settings WHERE key = ?1")
         .map_err(|e| e.to_string())?;
     let mut rows = stmt
-        .query_map(params![VAULT_KEY_SESSION_TTL_SEC], |row| row.get::<_, String>(0))
+        .query_map(params![VAULT_KEY_SESSION_TTL_SEC], |row| {
+            row.get::<_, String>(0)
+        })
         .map_err(|e| e.to_string())?;
     let raw = match rows.next() {
         Some(r) => r.map_err(|e| e.to_string())?,
@@ -225,7 +244,7 @@ pub fn list_integrations(app: &AppHandle) -> Result<Vec<IntegrationDto>, String>
 
 fn validate_provider(provider: &str) -> Result<(), String> {
     match provider {
-        "cloudflare" | "supabase" | "oauth_google" => Ok(()),
+        "cloudflare" | "vercel" | "supabase" | "oauth_google" => Ok(()),
         _ => Err("Provider non supportato".into()),
     }
 }
@@ -297,7 +316,9 @@ pub fn get_cloudflare_management_token_id(
         .prepare("SELECT management_token_id FROM cloudflare_accounts WHERE integration_id = ?1")
         .map_err(|e| e.to_string())?;
     let mut rows = stmt
-        .query_map(params![integration_id], |row| row.get::<_, Option<String>>(0))
+        .query_map(params![integration_id], |row| {
+            row.get::<_, Option<String>>(0)
+        })
         .map_err(|e| e.to_string())?;
     match rows.next() {
         Some(r) => Ok(r.map_err(|e| e.to_string())?),
@@ -315,7 +336,70 @@ pub fn delete_cloudflare_account_row(app: &AppHandle, integration_id: &str) -> R
     Ok(())
 }
 
-pub fn add_integration(app: &AppHandle, provider: &str, label: &str) -> Result<IntegrationDto, String> {
+pub fn upsert_vercel_account(
+    app: &AppHandle,
+    integration_id: &str,
+    user_id: &str,
+    user_email: Option<&str>,
+    team_id: Option<&str>,
+) -> Result<(), String> {
+    let conn = open_conn(app)?;
+    conn.execute(
+        r#"
+        INSERT INTO vercel_accounts (integration_id, user_id, user_email, team_id)
+        VALUES (?1, ?2, ?3, ?4)
+        ON CONFLICT(integration_id) DO UPDATE SET
+            user_id = excluded.user_id,
+            user_email = excluded.user_email,
+            team_id = excluded.team_id
+        "#,
+        params![integration_id, user_id, user_email, team_id],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub fn get_vercel_account(
+    app: &AppHandle,
+    integration_id: &str,
+) -> Result<Option<VercelAccountDto>, String> {
+    let conn = open_conn(app)?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT integration_id, user_id, user_email, team_id FROM vercel_accounts WHERE integration_id = ?1",
+        )
+        .map_err(|e| e.to_string())?;
+    let mut rows = stmt
+        .query_map(params![integration_id], |row| {
+            Ok(VercelAccountDto {
+                integration_id: row.get(0)?,
+                user_id: row.get(1)?,
+                user_email: row.get(2)?,
+                team_id: row.get(3)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+    match rows.next() {
+        Some(r) => Ok(Some(r.map_err(|e| e.to_string())?)),
+        None => Ok(None),
+    }
+}
+
+pub fn delete_vercel_account_row(app: &AppHandle, integration_id: &str) -> Result<(), String> {
+    let conn = open_conn(app)?;
+    conn.execute(
+        "DELETE FROM vercel_accounts WHERE integration_id = ?1",
+        params![integration_id],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub fn add_integration(
+    app: &AppHandle,
+    provider: &str,
+    label: &str,
+) -> Result<IntegrationDto, String> {
     validate_provider(provider)?;
     let conn = open_conn(app)?;
     let id = uuid::Uuid::new_v4().to_string();
@@ -398,7 +482,15 @@ pub fn upsert_managed_secret(
             label = excluded.label,
             environment = excluded.environment
         "#,
-        params![id, integration_id, provider, external_id, label, environment, created_at],
+        params![
+            id,
+            integration_id,
+            provider,
+            external_id,
+            label,
+            environment,
+            created_at
+        ],
     )
     .map_err(|e| e.to_string())?;
     get_managed_secret_by_external_id(app, integration_id, external_id)?
@@ -455,7 +547,13 @@ pub fn mark_managed_secret_rotated(
         SET external_id = ?3, label = ?4, last_rotated_at = ?5
         WHERE integration_id = ?1 AND external_id = ?2
         "#,
-        params![integration_id, old_external_id, new_external_id, new_label, now_ms()?],
+        params![
+            integration_id,
+            old_external_id,
+            new_external_id,
+            new_label,
+            now_ms()?
+        ],
     )
     .map_err(|e| e.to_string())?;
     Ok(())

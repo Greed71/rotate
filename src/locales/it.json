@@ -79,9 +79,14 @@
       "defaultLabel": "Account Cloudflare",
       "blurb": "Collega Account ID e token di gestione: elenco token, rotazione con stesse policy, segreto salvato in modo sicuro."
     },
+    "vercel": {
+      "title": "Vercel",
+      "defaultLabel": "Account Vercel",
+      "blurb": "Collega un token Vercel per aggiornare variabili d'ambiente dei progetti dopo una rotazione."
+    },
     "supabase": {
       "title": "Supabase",
-      "defaultLabel": "Progetto Supabase",
+      "defaultLabel": "Account Supabase",
       "blurb": "Chiavi di progetto e segreti del tenant. Quando sarà supportato, le operazioni sensibili resteranno dietro al vault."
     },
     "oauth_google": {

@@ -159,7 +159,8 @@ impl SessionState {
         let mut g = self.inner.lock().expect("session mutex");
         g.auth_failures = g.auth_failures.saturating_add(1);
         if g.auth_failures >= MAX_AUTH_FAILURES_BEFORE_COOLDOWN {
-            g.auth_blocked_until = Some(Instant::now() + Duration::from_secs(AUTH_COOLDOWN_SECONDS));
+            g.auth_blocked_until =
+                Some(Instant::now() + Duration::from_secs(AUTH_COOLDOWN_SECONDS));
         }
     }
 

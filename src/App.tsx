@@ -7,6 +7,8 @@ import { HomeView } from "./components/HomeView";
 import { ServicePlaceholderDetail } from "./components/ServicePlaceholderDetail";
 import { ServicesView } from "./components/ServicesView";
 import { SettingsView } from "./components/SettingsView";
+import { SupabaseDetail } from "./components/SupabaseDetail";
+import { VercelDetail } from "./components/VercelDetail";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
 import { Sidebar } from "./components/Sidebar";
 import { ChangePinModal } from "./components/vault/ChangePinModal";
@@ -187,7 +189,19 @@ function MainShell(props: {
         {nav === "services" ? (
           openedService ? (
             openedService.provider === "cloudflare" ? (
-              <CloudflareDetail integration={openedService} onBack={closeServiceDetail} />
+              <CloudflareDetail
+                integration={openedService}
+                integrations={integrations}
+                onBack={closeServiceDetail}
+              />
+            ) : openedService.provider === "vercel" ? (
+              <VercelDetail integration={openedService} onBack={closeServiceDetail} />
+            ) : openedService.provider === "supabase" ? (
+              <SupabaseDetail
+                integration={openedService}
+                integrations={integrations}
+                onBack={closeServiceDetail}
+              />
             ) : (
               <ServicePlaceholderDetail integration={openedService} onBack={closeServiceDetail} />
             )

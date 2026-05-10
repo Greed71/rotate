@@ -9,13 +9,46 @@ const SERVICE: &str = "com.longo.rotate";
 const PROBE_USER: &str = "rotate-keyring-probe";
 const PROBE_SECRET: &str = "rotate-probe-secret";
 
+#[derive(Clone, Copy)]
+pub enum ProviderToken {
+    Cloudflare,
+    Vercel,
+    Supabase,
+}
+
+impl ProviderToken {
+    fn id(self) -> &'static str {
+        match self {
+            Self::Cloudflare => "cloudflare",
+            Self::Vercel => "vercel",
+            Self::Supabase => "supabase",
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::Cloudflare => "Cloudflare",
+            Self::Vercel => "Vercel",
+            Self::Supabase => "Supabase",
+        }
+    }
+}
+
+fn token_key(provider: &str, integration_id: &str) -> String {
+    format!("{provider}-token-{integration_id}")
+}
+
 fn cf_key(integration_id: &str) -> String {
-    format!("cloudflare-token-{integration_id}")
+    token_key("cloudflare", integration_id)
+}
+
+fn token_entry(provider: &str, integration_id: &str) -> Result<Entry, String> {
+    let user = token_key(provider, integration_id);
+    Entry::new_with_target(&windows_target_name(&user), SERVICE, &user).map_err(|e| e.to_string())
 }
 
 fn cf_entry(integration_id: &str) -> Result<Entry, String> {
-    let user = cf_key(integration_id);
-    Entry::new_with_target(&windows_target_name(&user), SERVICE, &user).map_err(|e| e.to_string())
+    token_entry("cloudflare", integration_id)
 }
 
 fn cf_legacy_entry(integration_id: &str) -> Result<Entry, String> {
@@ -27,13 +60,17 @@ fn windows_target_name(user: &str) -> String {
 }
 
 fn fallback_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?.join("secrets");
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?
+        .join("secrets");
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     Ok(dir)
 }
 
-fn fallback_path(app: &AppHandle, integration_id: &str) -> Result<PathBuf, String> {
-    Ok(fallback_dir(app)?.join(format!("{}.dpapi", cf_key(integration_id))))
+fn fallback_path_for_key(app: &AppHandle, key: &str) -> Result<PathBuf, String> {
+    Ok(fallback_dir(app)?.join(format!("{key}.dpapi")))
 }
 
 #[cfg(windows)]
@@ -44,7 +81,7 @@ fn dpapi_protect(data: &[u8]) -> Result<Vec<u8>, String> {
         CryptProtectData, CRYPTPROTECT_UI_FORBIDDEN, CRYPT_INTEGER_BLOB,
     };
 
-    let mut input = CRYPT_INTEGER_BLOB {
+    let input = CRYPT_INTEGER_BLOB {
         cbData: data.len() as u32,
         pbData: data.as_ptr() as *mut u8,
     };
@@ -54,7 +91,7 @@ fn dpapi_protect(data: &[u8]) -> Result<Vec<u8>, String> {
     };
     let ok = unsafe {
         CryptProtectData(
-            &mut input,
+            &input,
             null(),
             null(),
             null_mut(),
@@ -64,11 +101,13 @@ fn dpapi_protect(data: &[u8]) -> Result<Vec<u8>, String> {
         )
     };
     if ok == 0 {
-        return Err(format!("DPAPI CryptProtectData failed: Windows error {}", unsafe {
-            GetLastError()
-        }));
+        return Err(format!(
+            "DPAPI CryptProtectData failed: Windows error {}",
+            unsafe { GetLastError() }
+        ));
     }
-    let encrypted = unsafe { std::slice::from_raw_parts(output.pbData, output.cbData as usize) }.to_vec();
+    let encrypted =
+        unsafe { std::slice::from_raw_parts(output.pbData, output.cbData as usize) }.to_vec();
     unsafe {
         LocalFree(output.pbData as *mut std::ffi::c_void);
     }
@@ -83,7 +122,7 @@ fn dpapi_unprotect(data: &[u8]) -> Result<Vec<u8>, String> {
         CryptUnprotectData, CRYPTPROTECT_UI_FORBIDDEN, CRYPT_INTEGER_BLOB,
     };
 
-    let mut input = CRYPT_INTEGER_BLOB {
+    let input = CRYPT_INTEGER_BLOB {
         cbData: data.len() as u32,
         pbData: data.as_ptr() as *mut u8,
     };
@@ -93,7 +132,7 @@ fn dpapi_unprotect(data: &[u8]) -> Result<Vec<u8>, String> {
     };
     let ok = unsafe {
         CryptUnprotectData(
-            &mut input,
+            &input,
             null_mut(),
             null(),
             null_mut(),
@@ -103,11 +142,13 @@ fn dpapi_unprotect(data: &[u8]) -> Result<Vec<u8>, String> {
         )
     };
     if ok == 0 {
-        return Err(format!("DPAPI CryptUnprotectData failed: Windows error {}", unsafe {
-            GetLastError()
-        }));
+        return Err(format!(
+            "DPAPI CryptUnprotectData failed: Windows error {}",
+            unsafe { GetLastError() }
+        ));
     }
-    let decrypted = unsafe { std::slice::from_raw_parts(output.pbData, output.cbData as usize) }.to_vec();
+    let decrypted =
+        unsafe { std::slice::from_raw_parts(output.pbData, output.cbData as usize) }.to_vec();
     unsafe {
         LocalFree(output.pbData as *mut std::ffi::c_void);
     }
@@ -124,14 +165,14 @@ fn dpapi_unprotect(_data: &[u8]) -> Result<Vec<u8>, String> {
     Err("Fallback cifrato disponibile solo su Windows.".into())
 }
 
-fn fallback_save(app: &AppHandle, integration_id: &str, token: &str) -> Result<(), String> {
-    let path = fallback_path(app, integration_id)?;
+fn fallback_save_key(app: &AppHandle, key: &str, token: &str) -> Result<(), String> {
+    let path = fallback_path_for_key(app, key)?;
     let encrypted = dpapi_protect(token.as_bytes())?;
     std::fs::write(path, encrypted).map_err(|e| e.to_string())
 }
 
-fn fallback_get(app: &AppHandle, integration_id: &str) -> Result<Option<String>, String> {
-    let path = fallback_path(app, integration_id)?;
+fn fallback_get_key(app: &AppHandle, key: &str) -> Result<Option<String>, String> {
+    let path = fallback_path_for_key(app, key)?;
     let encrypted = match std::fs::read(path) {
         Ok(bytes) => bytes,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
@@ -146,8 +187,8 @@ fn fallback_get(app: &AppHandle, integration_id: &str) -> Result<Option<String>,
     }
 }
 
-fn fallback_delete(app: &AppHandle, integration_id: &str) -> Result<(), String> {
-    let path = fallback_path(app, integration_id)?;
+fn fallback_delete_key(app: &AppHandle, key: &str) -> Result<(), String> {
+    let path = fallback_path_for_key(app, key)?;
     match std::fs::remove_file(path) {
         Ok(()) => Ok(()),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
@@ -155,15 +196,30 @@ fn fallback_delete(app: &AppHandle, integration_id: &str) -> Result<(), String> 
     }
 }
 
-pub fn cf_token_save(app: &AppHandle, integration_id: &str, token: &str) -> Result<(), String> {
+fn fallback_get(app: &AppHandle, integration_id: &str) -> Result<Option<String>, String> {
+    fallback_get_key(app, &cf_key(integration_id))
+}
+
+fn fallback_delete(app: &AppHandle, integration_id: &str) -> Result<(), String> {
+    fallback_delete_key(app, &cf_key(integration_id))
+}
+
+fn token_save(
+    app: &AppHandle,
+    integration_id: &str,
+    provider: &str,
+    provider_label: &str,
+    token: &str,
+) -> Result<(), String> {
     let token = token.trim();
     if token.is_empty() {
-        return Err("Token Cloudflare vuoto.".into());
+        return Err(format!("Token {provider_label} vuoto."));
     }
+    let key = token_key(provider, integration_id);
 
-    let keyring_ok = match cf_entry(integration_id) {
+    let keyring_ok = match token_entry(provider, integration_id) {
         Ok(entry) => match entry.set_password(token) {
-            Ok(()) => match cf_entry(integration_id).and_then(|fresh| {
+            Ok(()) => match token_entry(provider, integration_id).and_then(|fresh| {
                 fresh
                     .get_password()
                     .map_err(|e| format!("Errore rilettura Windows Credential Manager: {e}"))
@@ -177,17 +233,81 @@ pub fn cf_token_save(app: &AppHandle, integration_id: &str, token: &str) -> Resu
     };
 
     if keyring_ok {
-        let _ = fallback_delete(app, integration_id);
+        let _ = fallback_delete_key(app, &key);
         return Ok(());
     }
 
-    fallback_save(app, integration_id, token)?;
-    let saved = fallback_get(app, integration_id)?
+    fallback_save_key(app, &key, token)?;
+    let saved = fallback_get_key(app, &key)?
         .ok_or_else(|| "Fallback DPAPI scritto ma non riletto.".to_string())?;
     if saved != token {
-        return Err("Fallback DPAPI ha restituito un valore diverso dal token appena salvato.".into());
+        return Err(
+            "Fallback DPAPI ha restituito un valore diverso dal token appena salvato.".into(),
+        );
     }
     Ok(())
+}
+
+fn token_get(
+    app: &AppHandle,
+    integration_id: &str,
+    provider: &str,
+    provider_label: &str,
+) -> Result<Option<String>, String> {
+    let key = token_key(provider, integration_id);
+    if let Ok(entry) = token_entry(provider, integration_id) {
+        match entry.get_password() {
+            Ok(s) => return Ok(Some(s)),
+            Err(keyring::Error::NoEntry) => {}
+            Err(err) => {
+                return Err(format!(
+                    "Errore lettura Windows Credential Manager per {}: {err}",
+                    windows_target_name(&key),
+                ));
+            }
+        }
+    }
+    fallback_get_key(app, &key).map_err(|e| format!("Errore lettura token {provider_label}: {e}"))
+}
+
+fn token_delete(app: &AppHandle, integration_id: &str, provider: &str) -> Result<(), String> {
+    let key = token_key(provider, integration_id);
+    if let Ok(entry) = token_entry(provider, integration_id) {
+        match entry.delete_credential() {
+            Ok(()) | Err(keyring::Error::NoEntry) => {}
+            Err(_) => {}
+        }
+    }
+    fallback_delete_key(app, &key)
+}
+
+pub fn provider_token_save(
+    app: &AppHandle,
+    integration_id: &str,
+    provider: ProviderToken,
+    token: &str,
+) -> Result<(), String> {
+    token_save(app, integration_id, provider.id(), provider.label(), token)
+}
+
+pub fn provider_token_get(
+    app: &AppHandle,
+    integration_id: &str,
+    provider: ProviderToken,
+) -> Result<Option<String>, String> {
+    token_get(app, integration_id, provider.id(), provider.label())
+}
+
+pub fn provider_token_delete(
+    app: &AppHandle,
+    integration_id: &str,
+    provider: ProviderToken,
+) -> Result<(), String> {
+    token_delete(app, integration_id, provider.id())
+}
+
+pub fn cf_token_save(app: &AppHandle, integration_id: &str, token: &str) -> Result<(), String> {
+    provider_token_save(app, integration_id, ProviderToken::Cloudflare, token)
 }
 
 pub fn cf_token_get(app: &AppHandle, integration_id: &str) -> Result<Option<String>, String> {
@@ -236,6 +356,34 @@ pub fn cf_token_delete(app: &AppHandle, integration_id: &str) -> Result<(), Stri
         }
     }
     fallback_delete(app, integration_id)
+}
+
+pub fn vercel_token_save(app: &AppHandle, integration_id: &str, token: &str) -> Result<(), String> {
+    provider_token_save(app, integration_id, ProviderToken::Vercel, token)
+}
+
+pub fn vercel_token_get(app: &AppHandle, integration_id: &str) -> Result<Option<String>, String> {
+    provider_token_get(app, integration_id, ProviderToken::Vercel)
+}
+
+pub fn vercel_token_delete(app: &AppHandle, integration_id: &str) -> Result<(), String> {
+    provider_token_delete(app, integration_id, ProviderToken::Vercel)
+}
+
+pub fn supabase_token_save(
+    app: &AppHandle,
+    integration_id: &str,
+    token: &str,
+) -> Result<(), String> {
+    provider_token_save(app, integration_id, ProviderToken::Supabase, token)
+}
+
+pub fn supabase_token_get(app: &AppHandle, integration_id: &str) -> Result<Option<String>, String> {
+    provider_token_get(app, integration_id, ProviderToken::Supabase)
+}
+
+pub fn supabase_token_delete(app: &AppHandle, integration_id: &str) -> Result<(), String> {
+    provider_token_delete(app, integration_id, ProviderToken::Supabase)
 }
 
 #[derive(Serialize)]
