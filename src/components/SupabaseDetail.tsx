@@ -33,6 +33,17 @@ type Props = {
 
 type DatabaseUrlMode = "direct" | "transaction" | "session";
 
+const MANAGED_SUPABASE_SECRET_NAMES = new Set([
+  "DATABASE_URL",
+  "SUPABASE_ANON_KEY",
+  "SUPABASE_DB_URL",
+  "SUPABASE_SERVICE_ROLE_KEY",
+]);
+
+function isManagedSupabaseSecret(name: string): boolean {
+  return MANAGED_SUPABASE_SECRET_NAMES.has(name.trim().toUpperCase());
+}
+
 function encodeDbPassword(password: string): string {
   return encodeURIComponent(password);
 }
@@ -62,7 +73,7 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
   const [secrets, setSecrets] = useState<SupabaseSecretRow[]>([]);
   const [apiKeys, setApiKeys] = useState<SupabaseApiKeyRow[]>([]);
   const [selectedProject, setSelectedProject] = useState<SupabaseProjectRow | null>(null);
-  const [secretName, setSecretName] = useState("TURNSTILE_SECRET_KEY");
+  const [secretName, setSecretName] = useState("");
   const [selectedSecretNames, setSelectedSecretNames] = useState<string[]>([]);
   const [secretValue, setSecretValue] = useState("");
   const [apiKeyBusyId, setApiKeyBusyId] = useState<string | null>(null);
@@ -92,6 +103,7 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
   const integrationId = integration.id;
   const linked = status?.linked ?? false;
   const vercelIntegration = integrations.find((item) => item.provider === "vercel");
+  const editableSecrets = secrets.filter((secret) => !isManagedSupabaseSecret(secret.name));
   const selectedDatabaseUrl = databaseResult
     ? buildDatabaseUrl(databaseResult.projectRef, databaseResult.password, databaseUrlMode, poolerHost.trim())
     : "";
@@ -152,15 +164,16 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
           projectRef: project.reference,
         });
         setSecrets(list);
+        const editableList = list.filter((secret) => !isManagedSupabaseSecret(secret.name));
         const preferred =
-          list.find((secret) => secret.name.toUpperCase().includes("TURNSTILE"))?.name ??
-          list[0]?.name ??
+          editableList.find((secret) => secret.name.toUpperCase().includes("TURNSTILE"))?.name ??
+          editableList[0]?.name ??
           "TURNSTILE_SECRET_KEY";
-        setSecretName(preferred);
+        setSecretName("");
         setSelectedSecretNames((current) =>
-          current.length > 0 && current.every((name) => list.some((secret) => secret.name === name))
+          current.length > 0 && current.every((name) => editableList.some((secret) => secret.name === name))
             ? current
-            : list.length > 0
+            : editableList.length > 0
               ? [preferred]
               : [],
         );
@@ -272,7 +285,14 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
 
   async function upsertSecret() {
     if (!selectedProject) return;
-    const names = selectedSecretNames.length > 0 ? selectedSecretNames : [secretName.trim()].filter(Boolean);
+    const manualSecretName = secretName.trim();
+    const names = Array.from(
+      new Set([
+        ...selectedSecretNames,
+        ...(manualSecretName ? [manualSecretName] : []),
+      ]),
+    );
+    if (names.length === 0) return;
     setBusy(true);
     setError(null);
     setHint(null);
@@ -287,6 +307,7 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
         },
       });
       setHint(`${names.length} secret aggiornati in ${selectedProject.name}.`);
+      setSecretName("");
       setSecretValue("");
       await refreshSecrets(selectedProject);
     } catch (err) {
@@ -489,10 +510,10 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
       ) : !initialLoadComplete || resourcesLoading ? (
         <ProviderLoadingPanel
           title="Caricamento Supabase"
-          description="Sto scaricando progetti e secret disponibili."
+          description="Sto scaricando progetti, API key e secret disponibili."
         />
       ) : (
-        <div className="space-y-6">
+        <div className="flex flex-col gap-6">
           <LinkedAccountBar
             details={
               <>
@@ -512,54 +533,108 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
             }
           />
 
-          <section className="space-y-3 rounded-2xl border border-surface-3/80 bg-surface-1/60 p-5">
+          <section className="order-1 rounded-2xl border border-surface-3/80 bg-surface-1/60 p-5">
+            <div className="grid gap-4 md:grid-cols-[1fr_minmax(260px,380px)] md:items-end">
+              <div>
+                <h2 className="text-sm font-semibold text-ink">Progetto Supabase</h2>
+                <p className="mt-1 text-xs leading-relaxed text-ink-muted">
+                  Scegli il progetto su cui leggere e aggiornare Edge Function secrets, API key e password database.
+                </p>
+                {selectedProject ? (
+                  <p className="mt-2 font-mono text-[11px] text-ink-muted">
+                    {selectedProject.reference}
+                  </p>
+                ) : null}
+              </div>
+              <label className="block space-y-1.5 text-xs font-semibold text-ink-muted">
+                <span>Progetto</span>
+                <select
+                  value={selectedProject?.reference ?? ""}
+                  onChange={(e) => setSelectedProject(projects.find((project) => project.reference === e.target.value) ?? null)}
+                  className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
+                >
+                  {projects.length === 0 ? (
+                    <option value="">Nessun progetto rilevato</option>
+                  ) : (
+                    projects.map((project) => (
+                      <option key={project.reference} value={project.reference}>{project.name}</option>
+                    ))
+                  )}
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <section className="order-4 space-y-3 rounded-2xl border border-surface-3/80 bg-surface-1/60 p-5">
             <div>
-              <h2 className="text-sm font-semibold text-ink">Secret Edge Functions</h2>
+              <h2 className="text-sm font-semibold text-ink">Secret custom del progetto</h2>
               <p className="mt-1 text-xs text-ink-muted">
-                Seleziona uno o più secret dall'elenco e aggiornali insieme con un valore esterno. Supabase non genera questi valori: li conserva.
+                Qui trovi solo i secret applicativi già presenti in Supabase e non gestiti dai flussi dedicati sopra. Puoi aggiornarli insieme oppure crearne uno nuovo incollando un valore generato altrove, per esempio un secret Turnstile.
               </p>
             </div>
-            <div className="grid gap-4 lg:grid-cols-[minmax(260px,360px)_1fr]">
-              <div className="space-y-3">
+            <div className="grid gap-4 lg:grid-cols-[1fr_minmax(260px,360px)]">
+              <div className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Secret disponibili</h3>
+                <div className="overflow-hidden rounded-xl border border-surface-3/80">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-surface-2/80 text-[11px] uppercase tracking-wide text-ink-muted">
+                      <tr>
+                        <th className="px-4 py-3 font-semibold">Aggiorna</th>
+                        <th className="px-4 py-3 font-semibold">Nome</th>
+                        <th className="px-4 py-3 font-semibold">Aggiornato</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-surface-3/60 bg-surface-1/40">
+                      {editableSecrets.length === 0 ? (
+                        <tr>
+                          <td colSpan={3} className="px-4 py-6 text-center">
+                            <p className="text-sm text-ink-muted">Nessun secret custom presente.</p>
+                            <p className="mt-1 text-xs text-ink-muted">
+                              Puoi crearne uno dal pannello a destra inserendo nome e valore.
+                            </p>
+                          </td>
+                        </tr>
+                      ) : (
+                        editableSecrets.map((secret) => (
+                          <tr key={secret.name} className="text-ink">
+                            <td className="px-4 py-3">
+                              <input
+                                type="checkbox"
+                                checked={selectedSecretNames.includes(secret.name)}
+                                onChange={() => toggleSecretName(secret.name)}
+                              />
+                            </td>
+                            <td className="px-4 py-3 font-mono text-xs">{secret.name}</td>
+                            <td className="px-4 py-3 text-xs text-ink-muted">{secret.updatedAt ?? "-"}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div className="space-y-3 rounded-xl border border-surface-3/70 bg-surface-0/40 p-4">
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Aggiorna secret</h3>
+                  <p className="mt-1 text-xs text-ink-muted">
+                    Salva lo stesso valore sui secret selezionati, oppure crea anche un nuovo secret manuale.
+                  </p>
+                </div>
                 <label className="block space-y-1.5 text-xs font-semibold text-ink-muted">
-                  <span>Progetto</span>
-                  <select
-                    value={selectedProject?.reference ?? ""}
-                    onChange={(e) => setSelectedProject(projects.find((project) => project.reference === e.target.value) ?? null)}
-                    className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
-                  >
-                    {projects.length === 0 ? (
-                      <option value="">Nessun progetto rilevato</option>
-                    ) : (
-                      projects.map((project) => (
-                        <option key={project.reference} value={project.reference}>{project.name}</option>
-                      ))
-                    )}
-                  </select>
-                  {selectedProject ? (
-                    <span className="block font-mono text-[11px] font-normal text-ink-muted">
-                      {selectedProject.reference}
-                    </span>
-                  ) : null}
-                </label>
-                <label className="block space-y-1.5 text-xs font-semibold text-ink-muted">
-                  <span>Secret non in elenco</span>
+                  <span>Aggiungi secret manuale</span>
                   <input
                     value={secretName}
                     onChange={(e) => setSecretName(e.target.value)}
                     className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 font-mono text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
-                    list="supabase-secret-options"
+                    placeholder="es. TURNSTILE_SECRET_KEY"
                     autoComplete="off"
                   />
-                  <datalist id="supabase-secret-options">
-                    {secrets.map((secret) => <option key={secret.name} value={secret.name} />)}
-                  </datalist>
                   <span className="block font-normal text-ink-muted">
-                    Usa questo campo solo per creare una nuova voce; per ruotare/aggiornare scegli dall'elenco.
+                    Opzionale: usalo solo se il secret non compare ancora nella tabella.
                   </span>
                 </label>
                 <label className="block space-y-1.5 text-xs font-semibold text-ink-muted">
-                  <span>Valore esterno</span>
+                  <span>Nuovo valore da salvare</span>
                   <input
                     type="password"
                     value={secretValue}
@@ -567,45 +642,18 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
                     className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 font-mono text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
                     autoComplete="off"
                   />
+                  <span className="block font-normal text-ink-muted">
+                    Incolla qui il valore già generato da un altro servizio, per esempio un nuovo secret Turnstile.
+                  </span>
                 </label>
                 {hint ? <p className="text-xs text-accent">{hint}</p> : null}
                 <button type="button" disabled={busy || !selectedProject || (selectedSecretNames.length === 0 && !secretName.trim()) || !secretValue} onClick={() => void upsertSecret()} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-surface-0 disabled:opacity-50">
-                  {busy ? "Aggiornamento..." : "Aggiorna selezionati"}
+                  {busy ? "Aggiornamento..." : "Salva nei secret"}
                 </button>
-              </div>
-              <div className="overflow-hidden rounded-xl border border-surface-3/80">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-surface-2/80 text-[11px] uppercase tracking-wide text-ink-muted">
-                    <tr>
-                      <th className="px-4 py-3 font-semibold">Usa</th>
-                      <th className="px-4 py-3 font-semibold">Nome</th>
-                      <th className="px-4 py-3 font-semibold">Aggiornato</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-surface-3/60 bg-surface-1/40">
-                    {secrets.length === 0 ? (
-                      <tr><td colSpan={3} className="px-4 py-5 text-center text-ink-muted">Nessun secret rilevato.</td></tr>
-                    ) : (
-                      secrets.map((secret) => (
-                        <tr key={secret.name} className="text-ink">
-                          <td className="px-4 py-3">
-                            <input
-                              type="checkbox"
-                              checked={selectedSecretNames.includes(secret.name)}
-                              onChange={() => toggleSecretName(secret.name)}
-                            />
-                          </td>
-                          <td className="px-4 py-3 font-mono text-xs">{secret.name}</td>
-                          <td className="px-4 py-3 text-xs text-ink-muted">{secret.updatedAt ?? "-"}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
               </div>
             </div>
           </section>
-          <section className="space-y-3 rounded-2xl border border-surface-3/80 bg-surface-1/60 p-5">
+          <section className="order-2 space-y-3 rounded-2xl border border-surface-3/80 bg-surface-1/60 p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="text-sm font-semibold text-ink">API key Supabase</h2>
@@ -661,7 +709,7 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
               </table>
             </div>
           </section>
-          <section className="space-y-3 rounded-2xl border border-rose-500/25 bg-rose-500/5 p-5">
+          <section className="order-3 space-y-3 rounded-2xl border border-rose-500/25 bg-rose-500/5 p-5">
             <div>
               <h2 className="text-sm font-semibold text-rose-100">Password database Postgres</h2>
               <p className="mt-1 text-xs leading-relaxed text-ink-muted">
