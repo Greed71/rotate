@@ -14,6 +14,8 @@ pub enum ProviderToken {
     Cloudflare,
     Vercel,
     Supabase,
+    Resend,
+    OauthGoogle,
 }
 
 impl ProviderToken {
@@ -22,6 +24,8 @@ impl ProviderToken {
             Self::Cloudflare => "cloudflare",
             Self::Vercel => "vercel",
             Self::Supabase => "supabase",
+            Self::Resend => "resend",
+            Self::OauthGoogle => "oauth_google",
         }
     }
 
@@ -30,6 +34,8 @@ impl ProviderToken {
             Self::Cloudflare => "Cloudflare",
             Self::Vercel => "Vercel",
             Self::Supabase => "Supabase",
+            Self::Resend => "Resend",
+            Self::OauthGoogle => "Google OAuth",
         }
     }
 }
@@ -384,6 +390,30 @@ pub fn supabase_token_get(app: &AppHandle, integration_id: &str) -> Result<Optio
 
 pub fn supabase_token_delete(app: &AppHandle, integration_id: &str) -> Result<(), String> {
     provider_token_delete(app, integration_id, ProviderToken::Supabase)
+}
+
+pub fn resend_token_save(app: &AppHandle, integration_id: &str, token: &str) -> Result<(), String> {
+    provider_token_save(app, integration_id, ProviderToken::Resend, token)
+}
+
+pub fn resend_token_get(app: &AppHandle, integration_id: &str) -> Result<Option<String>, String> {
+    provider_token_get(app, integration_id, ProviderToken::Resend)
+}
+
+pub fn resend_token_delete(app: &AppHandle, integration_id: &str) -> Result<(), String> {
+    provider_token_delete(app, integration_id, ProviderToken::Resend)
+}
+
+pub fn oauth_google_secret_save(
+    app: &AppHandle,
+    integration_id: &str,
+    token: &str,
+) -> Result<(), String> {
+    provider_token_save(app, integration_id, ProviderToken::OauthGoogle, token)
+}
+
+pub fn oauth_google_secret_delete(app: &AppHandle, integration_id: &str) -> Result<(), String> {
+    provider_token_delete(app, integration_id, ProviderToken::OauthGoogle)
 }
 
 #[derive(Serialize)]

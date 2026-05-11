@@ -89,10 +89,15 @@
       "defaultLabel": "Account Supabase",
       "blurb": "Chiavi di progetto e segreti del tenant. Quando sarà supportato, le operazioni sensibili resteranno dietro al vault."
     },
+    "resend": {
+      "title": "Resend",
+      "defaultLabel": "Account Resend",
+      "blurb": "Crea nuove API key Resend, mostra il valore una sola volta e aggiorna gli env collegati."
+    },
     "oauth_google": {
       "title": "OAuth (Google)",
       "defaultLabel": "Client OAuth Google",
-      "blurb": "Client ID e secret per flussi OAuth. Richiede in genere configurazione in Google Cloud Console."
+      "blurb": "Gestione assistita di Client ID e client secret creati nella Google Cloud Console."
     }
   },
   "services": {
@@ -103,7 +108,14 @@
     "subtitle": "Clicca una riga per aprire l’account e gestire token e impostazioni.",
     "colService": "Provider",
     "colLabel": "Nome",
-    "colAdded": "Aggiunto il"
+    "colAdded": "Aggiunto il",
+    "colActions": "Azioni",
+    "remove": "Rimuovi",
+    "removeTitle": "Rimuovi servizio",
+    "removeBody": "Vuoi rimuovere {{provider}} \"{{label}}\" da Rotate? Verranno cancellati credenziali locali, metadati e impostazioni salvate per questo servizio. Le risorse esterne nel provider non vengono eliminate.",
+    "removeCancel": "Annulla",
+    "removeConfirm": "Rimuovi servizio",
+    "removing": "Rimozione..."
   },
   "placeholder": {
     "back": "← Torna ai servizi",

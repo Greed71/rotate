@@ -89,10 +89,15 @@
       "defaultLabel": "Supabase project",
       "blurb": "Project keys and tenant secrets. When supported, sensitive actions stay behind the vault."
     },
+    "resend": {
+      "title": "Resend",
+      "defaultLabel": "Resend account",
+      "blurb": "Create new Resend API keys, reveal the value once, and update linked env vars."
+    },
     "oauth_google": {
       "title": "OAuth (Google)",
       "defaultLabel": "Google OAuth client",
-      "blurb": "Client ID and secret for OAuth flows. Usually configured in Google Cloud Console."
+      "blurb": "Assisted handling for Client ID and client secrets created in Google Cloud Console."
     }
   },
   "services": {
@@ -103,7 +108,14 @@
     "subtitle": "Click a row to open the account and manage tokens and settings.",
     "colService": "Provider",
     "colLabel": "Name",
-    "colAdded": "Added"
+    "colAdded": "Added",
+    "colActions": "Actions",
+    "remove": "Remove",
+    "removeTitle": "Remove service",
+    "removeBody": "Remove {{provider}} \"{{label}}\" from Rotate? Local credentials, metadata, and saved settings for this service will be deleted. External provider resources are not deleted.",
+    "removeCancel": "Cancel",
+    "removeConfirm": "Remove service",
+    "removing": "Removing..."
   },
   "placeholder": {
     "back": "← Back to services",

@@ -13,17 +13,13 @@ import type {
 } from "../types";
 import { AlertMessage } from "./provider/AlertMessage";
 import { CredentialGuide } from "./provider/CredentialGuide";
+import { DestructiveToggle } from "./provider/DestructiveToggle";
 import { LinkedAccountBar } from "./provider/LinkedAccountBar";
 import { ProviderHeader } from "./provider/ProviderHeader";
 import { ProviderLoadingPanel } from "./provider/ProviderLoadingPanel";
 import { VercelEnvWriter } from "./provider/VercelEnvWriter";
 import type { DeployTarget } from "../secretDestinations";
-
-function errText(e: unknown): string {
-  if (typeof e === "string") return e;
-  if (e && typeof e === "object" && "message" in e) return String((e as { message: unknown }).message);
-  return String(e);
-}
+import { errText } from "./provider/errors";
 
 type Props = {
   integration: Integration;
@@ -661,14 +657,12 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
                   Qui la nuova chiave viene generata da Supabase. Rotate la mostra una sola volta.
                 </p>
               </div>
-              <label className="flex items-center gap-2 rounded-lg border border-surface-3 px-3 py-1.5 text-xs text-ink-muted">
-                <input
-                  type="checkbox"
-                  checked={deleteOldApiKey}
-                  onChange={(e) => setDeleteOldApiKey(e.target.checked)}
-                />
-                <span>Elimina subito la vecchia key</span>
-              </label>
+              <DestructiveToggle
+                checked={deleteOldApiKey}
+                title="Revoca vecchia key"
+                description="Solo dopo aver aggiornato gli env"
+                onChange={setDeleteOldApiKey}
+              />
             </div>
             <div className="overflow-hidden rounded-xl border border-surface-3/80">
               <table className="w-full text-left text-sm">

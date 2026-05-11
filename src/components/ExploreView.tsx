@@ -43,6 +43,13 @@ export function ExploreView({ integrations, onAdd }: Props) {
         envHints: ["SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"],
       },
       {
+        id: "resend",
+        name: t("providers.resend.title"),
+        blurb: t("providers.resend.blurb"),
+        automation: "partial",
+        envHints: ["RESEND_API_KEY"],
+      },
+      {
         id: "oauth_google",
         name: t("providers.oauth_google.title"),
         blurb: t("providers.oauth_google.blurb"),

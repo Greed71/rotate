@@ -1,6 +1,6 @@
 export type NavId = "home" | "explore" | "services" | "settings";
 
-export type ProviderId = "cloudflare" | "vercel" | "supabase" | "oauth_google";
+export type ProviderId = "cloudflare" | "vercel" | "supabase" | "resend" | "oauth_google";
 
 export type AutomationLevel = "full" | "partial" | "manual";
 
@@ -111,6 +111,31 @@ export type SupabaseApiKeyRotateResult = {
 export type SupabaseDatabasePasswordRotateResult = {
   projectRef: string;
   password: string;
+};
+
+export type ResendStatusDto = {
+  linked: boolean;
+};
+
+export type ResendApiKeyRow = {
+  id: string;
+  name: string;
+  createdAt: string | null;
+  lastUsedAt: string | null;
+};
+
+export type ResendRotateResult = {
+  oldKeyId: string | null;
+  newKeyId: string;
+  name: string;
+  token: string;
+  deletedOld: boolean;
+};
+
+export type OauthGoogleStatusDto = {
+  linked: boolean;
+  clientId: string | null;
+  label: string | null;
 };
 
 export type SecretStorageDiagnosticsDto = {

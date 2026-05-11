@@ -8,12 +8,7 @@ import { DeployTargetsPicker } from "./provider/DeployTargetsPicker";
 import { LinkedAccountBar } from "./provider/LinkedAccountBar";
 import { ProviderHeader } from "./provider/ProviderHeader";
 import { ProviderLoadingPanel } from "./provider/ProviderLoadingPanel";
-
-function errText(e: unknown): string {
-  if (typeof e === "string") return e;
-  if (e && typeof e === "object" && "message" in e) return String((e as { message: unknown }).message);
-  return String(e);
-}
+import { errText } from "./provider/errors";
 
 type Props = {
   integration: Integration;

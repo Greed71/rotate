@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { CloudflareDetail } from "./components/CloudflareDetail";
 import { ExploreView } from "./components/ExploreView";
 import { HomeView } from "./components/HomeView";
+import { OauthGoogleDetail } from "./components/OauthGoogleDetail";
+import { ResendDetail } from "./components/ResendDetail";
 import { ServicePlaceholderDetail } from "./components/ServicePlaceholderDetail";
 import { ServicesView } from "./components/ServicesView";
 import { SettingsView } from "./components/SettingsView";
@@ -14,18 +16,13 @@ import { Sidebar } from "./components/Sidebar";
 import { ChangePinModal } from "./components/vault/ChangePinModal";
 import { PinSetupScreen } from "./components/vault/PinSetupScreen";
 import { UnlockScreen } from "./components/vault/UnlockScreen";
+import { errText } from "./components/provider/errors";
 import type { Integration, IntegrationDto, NavId, ProviderId, SecurityStatusDto } from "./types";
 import { integrationFromDto } from "./types";
 
 async function loadIntegrationsFromDisk(): Promise<Integration[]> {
   const rows = await invoke<IntegrationDto[]>("integrations_list");
   return rows.map(integrationFromDto);
-}
-
-function errText(e: unknown): string {
-  if (typeof e === "string") return e;
-  if (e && typeof e === "object" && "message" in e) return String((e as { message: unknown }).message);
-  return String(e);
 }
 
 function MainShell(props: {
@@ -123,7 +120,9 @@ function MainShell(props: {
 
   const handleAdd = useCallback(
     async (provider: ProviderId) => {
-      if (integrations.some((p) => p.provider === provider)) {
+      const existing = integrations.find((p) => p.provider === provider);
+      if (existing) {
+        setOpenedService(existing);
         setNav("services");
         return;
       }
@@ -132,7 +131,9 @@ function MainShell(props: {
           provider,
           label: t(`providers.${provider}.defaultLabel`),
         });
-        setIntegrations((prev) => [...prev, integrationFromDto(row)]);
+        const added = integrationFromDto(row);
+        setIntegrations((prev) => [...prev, added]);
+        setOpenedService(added);
         setNav("services");
       } catch (e) {
         console.error(e);
@@ -162,6 +163,17 @@ function MainShell(props: {
     setOpenedService(integration);
     setNav("services");
   }, []);
+
+  const removeIntegration = useCallback(
+    async (integration: Integration) => {
+      await invoke("integrations_remove", { integrationId: integration.id });
+      setIntegrations((prev) => prev.filter((item) => item.id !== integration.id));
+      if (openedService?.id === integration.id) {
+        setOpenedService(null);
+      }
+    },
+    [openedService?.id],
+  );
 
   return (
     <div className="flex h-full bg-surface-0 text-ink">
@@ -202,6 +214,18 @@ function MainShell(props: {
                 integrations={integrations}
                 onBack={closeServiceDetail}
               />
+            ) : openedService.provider === "resend" ? (
+              <ResendDetail
+                integration={openedService}
+                integrations={integrations}
+                onBack={closeServiceDetail}
+              />
+            ) : openedService.provider === "oauth_google" ? (
+              <OauthGoogleDetail
+                integration={openedService}
+                integrations={integrations}
+                onBack={closeServiceDetail}
+              />
             ) : (
               <ServicePlaceholderDetail integration={openedService} onBack={closeServiceDetail} />
             )
@@ -210,6 +234,7 @@ function MainShell(props: {
               integrations={integrations}
               onGoExplore={() => setNav("explore")}
               onOpenIntegration={setOpenedService}
+              onRemoveIntegration={removeIntegration}
             />
           )
         ) : null}

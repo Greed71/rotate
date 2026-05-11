@@ -2,8 +2,10 @@
 
 mod cf_api;
 mod db;
+mod resend_api;
 mod secrets;
 mod security;
+mod simple_provider_commands;
 mod supabase_api;
 mod vercel_api;
 
@@ -132,6 +134,36 @@ fn integrations_add(
 ) -> Result<db::IntegrationDto, String> {
     security::require_vault_access(&app, &session)?;
     db::add_integration(&app, &provider, &label)
+}
+
+#[tauri::command]
+fn integrations_remove(
+    app: tauri::AppHandle,
+    session: tauri::State<SessionState>,
+    integration_id: String,
+) -> Result<(), String> {
+    security::require_vault_access(&app, &session)?;
+    let row = db::get_integration_by_id(&app, &integration_id)?
+        .ok_or_else(|| "Integrazione non trovata.".to_string())?;
+    match row.provider.as_str() {
+        "cloudflare" => {
+            secrets::cf_token_delete(&app, &integration_id)?;
+        }
+        "vercel" => {
+            secrets::vercel_token_delete(&app, &integration_id)?;
+        }
+        "supabase" => {
+            secrets::supabase_token_delete(&app, &integration_id)?;
+        }
+        "resend" => {
+            secrets::resend_token_delete(&app, &integration_id)?;
+        }
+        "oauth_google" => {
+            secrets::oauth_google_secret_delete(&app, &integration_id)?;
+        }
+        _ => return Err("Provider non supportato.".into()),
+    }
+    db::delete_integration(&app, &integration_id)
 }
 
 #[derive(Serialize)]
@@ -1063,6 +1095,15 @@ pub fn run() {
             security_set_session_ttl,
             integrations_list,
             integrations_add,
+            integrations_remove,
+            simple_provider_commands::resend_link,
+            simple_provider_commands::resend_status,
+            simple_provider_commands::resend_list_api_keys,
+            simple_provider_commands::resend_rotate_api_key,
+            simple_provider_commands::resend_unlink,
+            simple_provider_commands::oauth_google_link,
+            simple_provider_commands::oauth_google_status,
+            simple_provider_commands::oauth_google_unlink,
             supabase_link,
             supabase_status,
             supabase_list_projects,

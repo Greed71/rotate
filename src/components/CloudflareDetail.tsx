@@ -4,14 +4,27 @@ import { Trans, useTranslation } from "react-i18next";
 import { copySensitiveWithAutoClear } from "../clipboardSecure";
 import type { DeployTarget } from "../secretDestinations";
 import { AlertMessage } from "./provider/AlertMessage";
-import { CredentialGuide } from "./provider/CredentialGuide";
-import { DeployTargetsPicker } from "./provider/DeployTargetsPicker";
 import { LinkedAccountBar } from "./provider/LinkedAccountBar";
 import { ProviderHeader } from "./provider/ProviderHeader";
 import { ProviderLoadingPanel } from "./provider/ProviderLoadingPanel";
+import { errText } from "./provider/errors";
 import { AccessServiceTokensSection } from "./cloudflare/AccessServiceTokensSection";
+import { AccountTokensSection } from "./cloudflare/AccountTokensSection";
+import {
+  AccessRotateModal,
+  AccessRotateResultModal,
+  AccountTokenRotateModal,
+  AccountTokenRotateResultModal,
+  ConfirmRevealTokenModal,
+  ConfirmUnlinkModal,
+  RevealManagedTokenModal,
+  TurnstileRotateModal,
+} from "./cloudflare/CloudflareAccountModals";
+import { CloudflareConnectForm } from "./cloudflare/CloudflareConnectForm";
 import { PagesSecretsSection } from "./cloudflare/PagesSecretsSection";
 import { SecretsStoreSection } from "./cloudflare/SecretsStoreSection";
+import { StorageDiagnosticsPanel } from "./cloudflare/StorageDiagnosticsPanel";
+import { TurnstileRotateResultModal } from "./cloudflare/TurnstileRotateResultModal";
 import { TurnstileSection } from "./cloudflare/TurnstileSection";
 import { WorkersSecretsSection } from "./cloudflare/WorkersSecretsSection";
 import type {
@@ -34,12 +47,6 @@ import type {
   WorkerScriptRow,
   WorkerSecretRow,
 } from "../types";
-
-function errText(e: unknown): string {
-  if (typeof e === "string") return e;
-  if (e && typeof e === "object" && "message" in e) return String((e as { message: unknown }).message);
-  return String(e);
-}
 
 type Props = {
   integration: Integration;
@@ -851,75 +858,14 @@ export function CloudflareDetail({ integration, integrations = [], onBack }: Pro
       <AlertMessage message={error} />
 
       {!linked ? (
-        <form
-          onSubmit={(e) => void handleLink(e)}
-          className="max-w-lg space-y-4 rounded-2xl border border-surface-3/80 bg-surface-1/80 p-6"
-        >
-          <div>
-            <h2 className="text-sm font-semibold text-ink">
-              {accountId ? t("cloudflare.reconnectTitle") : t("cloudflare.connectTitle")}
-            </h2>
-            <p className="mt-1 text-xs text-ink-muted">
-              {accountId ? t("cloudflare.reconnectLead") : t("cloudflare.connectLead")}
-            </p>
-          </div>
-          <CredentialGuide
-            steps={[
-              "Apri la dashboard Cloudflare e copia l'Account ID dalla pagina dell'account.",
-              <>
-                Crea un API token da <span className="font-medium text-ink">My Profile / API Tokens</span> oppure da <span className="font-medium text-ink">Manage Account / API Tokens</span>.
-              </>,
-              <>
-                Per Turnstile servono almeno <span className="font-mono text-ink">Turnstile Sites Read</span> e <span className="font-mono text-ink">Turnstile Sites Write</span>. Aggiungi Pages, Workers, Access o Secrets Store solo se vuoi gestire anche quelle destinazioni.
-              </>,
-              "Dopo la creazione Cloudflare mostra il token una sola volta: copialo subito e incollalo qui.",
-            ]}
-            links={[
-              {
-                href: "https://developers.cloudflare.com/fundamentals/api/get-started/create-token/",
-                label: "Guida API token Cloudflare",
-              },
-              {
-                href: "https://developers.cloudflare.com/turnstile/get-started/widget-management/api/",
-                label: "Permessi Turnstile",
-              },
-            ]}
-          />
-          <div className="space-y-1.5">
-            <label htmlFor="cf-account" className="text-xs font-semibold text-ink-muted">
-              {t("cloudflare.accountId")}
-            </label>
-            <input
-              id="cf-account"
-              value={accountId}
-              onChange={(e) => setAccountId(e.target.value)}
-              className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm text-ink outline-none ring-accent/40 focus:ring-2"
-              placeholder={t("cloudflare.accountIdPh")}
-              autoComplete="off"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label htmlFor="cf-token" className="text-xs font-semibold text-ink-muted">
-              {t("cloudflare.apiToken")}
-            </label>
-            <input
-              id="cf-token"
-              type="password"
-              value={apiToken}
-              onChange={(e) => setApiToken(e.target.value)}
-              className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 font-mono text-sm text-ink outline-none ring-accent/40 focus:ring-2"
-              placeholder={t("cloudflare.apiTokenPh")}
-              autoComplete="off"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={busy}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-surface-0 hover:brightness-110 disabled:opacity-50"
-          >
-            {busy ? t("cloudflare.verifying") : t("cloudflare.saveVerify")}
-          </button>
-        </form>
+        <CloudflareConnectForm
+          accountId={accountId}
+          apiToken={apiToken}
+          busy={busy}
+          onAccountIdChange={setAccountId}
+          onApiTokenChange={setApiToken}
+          onSubmit={(event) => void handleLink(event)}
+        />
       ) : !initialLoadComplete || resourcesLoading ? (
         <ProviderLoadingPanel
           title="Caricamento servizi Cloudflare"
@@ -974,38 +920,7 @@ export function CloudflareDetail({ integration, integrations = [], onBack }: Pro
           />
 
           {storageDiagnostics ? (
-            <section className="rounded-2xl border border-surface-3/80 bg-surface-1/60 p-5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold text-ink">Diagnostica Credential Manager</h2>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                    storageDiagnostics.ok
-                      ? "bg-accent/15 text-accent"
-                      : "bg-rose-500/15 text-rose-200"
-                  }`}
-                >
-                  {storageDiagnostics.ok ? "OK" : "Errore"}
-                </span>
-              </div>
-              <dl className="mt-3 grid gap-2 text-xs sm:grid-cols-[180px_1fr]">
-                <dt className="text-ink-muted">Voce Cloudflare attesa</dt>
-                <dd className="break-all font-mono text-ink">
-                  {storageDiagnostics.credentialTarget}
-                </dd>
-                <dt className="text-ink-muted">Voce test</dt>
-                <dd className="break-all font-mono text-ink">{storageDiagnostics.probeTarget}</dd>
-                <dt className="text-ink-muted">Creazione entry</dt>
-                <dd className="font-mono text-ink">{storageDiagnostics.entryNew}</dd>
-                <dt className="text-ink-muted">Scrittura test</dt>
-                <dd className="font-mono text-ink">{storageDiagnostics.setPassword}</dd>
-                <dt className="text-ink-muted">Lettura test</dt>
-                <dd className="font-mono text-ink">{storageDiagnostics.getPassword}</dd>
-                <dt className="text-ink-muted">Pulizia test</dt>
-                <dd className="font-mono text-ink">{storageDiagnostics.deleteCredential}</dd>
-                <dt className="text-ink-muted">Fallback DPAPI</dt>
-                <dd className="font-mono text-ink">{storageDiagnostics.dpapiRoundtrip}</dd>
-              </dl>
-            </section>
+            <StorageDiagnosticsPanel diagnostics={storageDiagnostics} />
           ) : null}
 
           <TurnstileSection
@@ -1083,823 +998,193 @@ export function CloudflareDetail({ integration, integrations = [], onBack }: Pro
             }}
           />
 
-          <section className="space-y-3 rounded-2xl border border-surface-3/80 bg-surface-1/60 p-5">
-            <div>
-              <h2 className="text-sm font-semibold text-ink">{t("cloudflare.rotateByIdTitle")}</h2>
-              <p className="mt-1 text-xs text-ink-muted">{t("cloudflare.rotateByIdLead")}</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <input
-                value={manualTokenId}
-                onChange={(e) => setManualTokenId(e.target.value)}
-                className="min-w-[260px] flex-1 rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 font-mono text-sm text-ink outline-none ring-accent/40 focus:ring-2"
-                placeholder={t("cloudflare.tokenIdPh")}
-                autoComplete="off"
-              />
-              <button
-                type="button"
-                disabled={!manualTokenId.trim() || busy || rotateBusy}
-                onClick={openManualRotate}
-                className="rounded-lg border border-accent/50 px-3 py-2 text-sm font-medium text-accent hover:bg-accent/10 disabled:opacity-50"
-              >
-                {t("cloudflare.rotateThisId")}
-              </button>
-            </div>
-          </section>
-
-          <div className="overflow-hidden rounded-2xl border border-surface-3/80">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-surface-2/80 text-[11px] uppercase tracking-wide text-ink-muted">
-                <tr>
-                  <th className="px-4 py-3 font-semibold">{t("cloudflare.colName")}</th>
-                  <th className="px-4 py-3 font-semibold">{t("cloudflare.colStatus")}</th>
-                  <th className="px-4 py-3 font-semibold">{t("cloudflare.colExpiry")}</th>
-                  <th className="px-4 py-3 font-semibold">{t("cloudflare.colManaged")}</th>
-                  <th className="px-4 py-3 font-mono text-[10px] font-semibold">{t("cloudflare.colId")}</th>
-                  <th className="px-4 py-3 font-semibold">{t("cloudflare.colActions")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-3/60 bg-surface-1/40">
-                {tokens.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-6 text-center text-ink-muted">
-                      {t("cloudflare.noTokens")}
-                    </td>
-                  </tr>
-                ) : (
-                  tokens.map((tok) => {
-                    const isManaged = managedExternalIds.has(tok.id);
-                    return (
-                      <tr key={tok.id} className="text-ink">
-                        <td className="px-4 py-3 font-medium">{tok.name}</td>
-                        <td className="px-4 py-3 text-ink-muted">{tok.status}</td>
-                        <td className="px-4 py-3 text-ink-muted">
-                          {tok.expiresOn ?? "\u2014"}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                              isManaged
-                                ? "bg-accent/15 text-accent"
-                                : "bg-surface-3/70 text-ink-muted"
-                            }`}
-                          >
-                            {isManaged ? t("cloudflare.managedYes") : t("cloudflare.managedNo")}
-                          </span>
-                        </td>
-                        <td className="max-w-[120px] truncate px-4 py-3 font-mono text-[11px] text-ink-muted">
-                          {tok.id}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-wrap gap-2">
-                            <button
-                              type="button"
-                              disabled={busy || rotateBusy || isManaged}
-                              onClick={() => void trackToken(tok)}
-                              className="rounded-lg border border-surface-3 px-2.5 py-1 text-xs font-medium text-ink-muted hover:border-accent/40 disabled:opacity-50"
-                            >
-                              {isManaged ? t("cloudflare.tracked") : t("cloudflare.track")}
-                            </button>
-                            <button
-                              type="button"
-                              disabled={busy || rotateBusy}
-                              onClick={() => openRotateModal(tok)}
-                              className="rounded-lg border border-accent/50 px-2.5 py-1 text-xs font-medium text-accent hover:bg-accent/10 disabled:opacity-50"
-                            >
-                              {t("cloudflare.rotate")}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+          <AccountTokensSection
+            tokens={tokens}
+            managedExternalIds={managedExternalIds}
+            manualTokenId={manualTokenId}
+            busy={busy}
+            rotateBusy={rotateBusy}
+            onManualTokenIdChange={setManualTokenId}
+            onManualRotate={openManualRotate}
+            onTrackToken={(token) => void trackToken(token)}
+            onRotateToken={openRotateModal}
+          />
           <p className="text-xs text-ink-muted">{t("cloudflare.footnote")}</p>
         </div>
       )}
 
       {rotateTarget ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-lg rounded-2xl border border-surface-3 bg-surface-1 p-6 shadow-2xl">
-            <h3 className="text-sm font-semibold text-ink">{t("cloudflare.rotateTitle")}</h3>
-            <p className="mt-1 text-xs text-ink-muted">
-              <Trans
-                i18nKey="cloudflare.rotateLead"
-                values={{ name: rotateTarget.name }}
-                components={[<span className="font-medium text-ink" key="0" />]}
-              />
-            </p>
-            <label className="mt-4 flex cursor-pointer items-start gap-2 text-sm text-ink">
-              <input
-                type="checkbox"
-                checked={rotateRevokeOld}
-                onChange={(e) => setRotateRevokeOld(e.target.checked)}
-                className="mt-1 rounded border-surface-3"
-              />
-              <span>{t("cloudflare.rotateRevoke")}</span>
-            </label>
-            <p className="mt-3 text-xs text-amber-100/90">{t("cloudflare.rotateWarn")}</p>
-            <div className="mt-5 flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                disabled={rotateBusy}
-                onClick={closeRotateModal}
-                className="rounded-lg border border-surface-3 px-3 py-1.5 text-sm text-ink hover:border-accent/40 disabled:opacity-50"
-              >
-                {t("cloudflare.cancel")}
-              </button>
-              <button
-                type="button"
-                disabled={rotateBusy}
-                onClick={() => void confirmRotate()}
-                className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-surface-0 disabled:opacity-50"
-              >
-                {rotateBusy ? t("cloudflare.rotating") : t("cloudflare.confirm")}
-              </button>
-            </div>
-          </div>
-        </div>
+        <AccountTokenRotateModal
+          target={rotateTarget}
+          revokeOld={rotateRevokeOld}
+          busy={rotateBusy}
+          onRevokeOldChange={setRotateRevokeOld}
+          onCancel={closeRotateModal}
+          onConfirm={() => void confirmRotate()}
+        />
       ) : null}
-
       {confirmRevealOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-md rounded-2xl border border-amber-500/30 bg-surface-1 p-6 shadow-2xl">
-            <h3 className="text-sm font-semibold text-amber-100">Mostra token di gestione</h3>
-            <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-              Chiunque possa vedere lo schermo potrà leggere il token Cloudflare. Aprilo solo in un ambiente privato e chiudi la finestra appena hai finito.
-            </p>
-            <div className="mt-5 flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => setConfirmRevealOpen(false)}
-                className="rounded-lg border border-surface-3 px-3 py-1.5 text-sm text-ink hover:border-accent/40 disabled:opacity-50"
-              >
-                Annulla
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void openReveal()}
-                className="rounded-lg border border-amber-500/40 px-3 py-1.5 text-sm font-medium text-amber-100 hover:bg-amber-500/10 disabled:opacity-50"
-              >
-                Mostra token
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmRevealTokenModal
+          busy={busy}
+          onCancel={() => setConfirmRevealOpen(false)}
+          onConfirm={() => void openReveal()}
+        />
       ) : null}
-
       {confirmUnlinkOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-md rounded-2xl border border-rose-500/30 bg-surface-1 p-6 shadow-2xl">
-            <h3 className="text-sm font-semibold text-rose-100">Rimuovi collegamento Cloudflare</h3>
-            <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-              Verranno rimossi da questo dispositivo Account ID, token di gestione e stato locale del collegamento. I token su Cloudflare non vengono eliminati.
-            </p>
-            <div className="mt-5 flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => setConfirmUnlinkOpen(false)}
-                className="rounded-lg border border-surface-3 px-3 py-1.5 text-sm text-ink hover:border-accent/40 disabled:opacity-50"
-              >
-                Annulla
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void handleUnlink()}
-                className="rounded-lg border border-rose-500/50 px-3 py-1.5 text-sm font-medium text-rose-100 hover:bg-rose-500/10 disabled:opacity-50"
-              >
-                Rimuovi collegamento
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmUnlinkModal
+          busy={busy}
+          onCancel={() => setConfirmUnlinkOpen(false)}
+          onConfirm={() => void handleUnlink()}
+        />
       ) : null}
-
       {rotateResult ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-lg rounded-2xl border border-amber-500/30 bg-surface-1 p-6 shadow-2xl">
-            <h3 className="text-sm font-semibold text-amber-100">{t("cloudflare.resultTitle")}</h3>
-            <p className="mt-1 text-xs text-ink-muted">{t("cloudflare.resultLead")}</p>
-            <p className="mt-2 font-mono text-[11px] text-ink-muted">
-              ID: {rotateResult.newTokenId}
-            </p>
-            <pre className="mt-3 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-surface-0 p-3 font-mono text-xs text-ink">
-              {rotateResult.newTokenSecret}
-            </pre>
-            <ul className="mt-3 space-y-1 text-xs text-ink-muted">
-              <li>
-                {t("cloudflare.resultTracked")}{" "}
-                {rotateResult.trackedSecretUpdated ? (
-                  <span className="text-accent">{t("cloudflare.yes")}</span>
-                ) : (
-                  <span>{t("cloudflare.no")}</span>
-                )}
-              </li>
-              <li>
-                {t("cloudflare.resultRevoked")}{" "}
-                {rotateResult.revokedOld ? (
-                  <span className="text-accent">{t("cloudflare.yes")}</span>
-                ) : (
-                  <span>{t("cloudflare.no")}</span>
-                )}
-              </li>
-            </ul>
-            {rotateCopyHint ? <p className="mt-2 text-xs text-accent">{rotateCopyHint}</p> : null}
-            <div className="mt-4 flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => void handleCopyNewSecret()}
-                className="rounded-lg border border-surface-3 px-3 py-1.5 text-sm text-ink hover:border-accent/40"
-              >
-                {t("cloudflare.copySecretAuto")}
-              </button>
-              <button
-                type="button"
-                onClick={closeRotateResult}
-                className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-surface-0"
-              >
-                {t("cloudflare.close")}
-              </button>
-            </div>
-          </div>
-        </div>
+        <AccountTokenRotateResultModal
+          result={rotateResult}
+          copyHint={rotateCopyHint}
+          onCopy={() => void handleCopyNewSecret()}
+          onClose={closeRotateResult}
+        />
       ) : null}
-
       {turnstileTarget ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-lg rounded-2xl border border-surface-3 bg-surface-1 p-6 shadow-2xl">
-            <h3 className="text-sm font-semibold text-ink">Ruota secret Turnstile</h3>
-            <p className="mt-1 text-xs text-ink-muted">
-              Verrà creato un nuovo secret per {turnstileTarget.name}. Il vecchio secret può restare valido per 2 ore, oppure essere invalidato subito.
-            </p>
-            <p className="mt-3 font-mono text-[11px] text-ink-muted">
-              Sitekey: {turnstileTarget.sitekey}
-            </p>
-            <p className="mt-3 text-xs text-amber-100/90">
-              Se Cloudflare restituisce errore di autenticazione, ricollega il token manager con permessi Turnstile Sites Write oppure Account Settings Write.
-            </p>
-            <div className="mt-5 flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                disabled={turnstileBusySitekey === turnstileTarget.sitekey}
-                onClick={() => setTurnstileTarget(null)}
-                className="rounded-lg border border-surface-3 px-3 py-1.5 text-sm text-ink hover:border-accent/40 disabled:opacity-50"
-              >
-                Annulla
-              </button>
-              <button
-                type="button"
-                disabled={turnstileBusySitekey === turnstileTarget.sitekey}
-                onClick={() => void rotateTurnstileSecret(turnstileTarget, false)}
-                className="rounded-lg border border-accent/50 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10 disabled:opacity-50"
-              >
-                Ruota con 2 ore di grace
-              </button>
-              <button
-                type="button"
-                disabled={turnstileBusySitekey === turnstileTarget.sitekey}
-                onClick={() => void rotateTurnstileSecret(turnstileTarget, true)}
-                className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-surface-0 disabled:opacity-50"
-              >
-                Invalida subito
-              </button>
-            </div>
-          </div>
-        </div>
+        <TurnstileRotateModal
+          target={turnstileTarget}
+          busySitekey={turnstileBusySitekey}
+          onCancel={() => setTurnstileTarget(null)}
+          onRotate={(immediate) => void rotateTurnstileSecret(turnstileTarget, immediate)}
+        />
       ) : null}
-
       {accessTarget ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-lg rounded-2xl border border-surface-3 bg-surface-1 p-6 shadow-2xl">
-            <h3 className="text-sm font-semibold text-ink">Ruota Access Service Token</h3>
-            <p className="mt-1 text-xs text-ink-muted">
-              Verra creato un nuovo Client Secret per {accessTarget.name}. Il vecchio secret puo essere invalidato subito oppure restare valido per 2 ore.
-            </p>
-            <p className="mt-3 font-mono text-[11px] text-ink-muted">
-              Client ID: {accessTarget.clientId || "-"}
-            </p>
-            <p className="mt-3 text-xs text-amber-100/90">
-              Se questo token e usato da automazioni o backend, usa la grace window e aggiorna le destinazioni prima che scada il vecchio secret.
-            </p>
-            <div className="mt-5 flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                disabled={accessBusyId === accessTarget.id}
-                onClick={() => setAccessTarget(null)}
-                className="rounded-lg border border-surface-3 px-3 py-1.5 text-sm text-ink hover:border-accent/40 disabled:opacity-50"
-              >
-                Annulla
-              </button>
-              <button
-                type="button"
-                disabled={accessBusyId === accessTarget.id}
-                onClick={() => void rotateAccessServiceToken(accessTarget, true)}
-                className="rounded-lg border border-accent/50 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10 disabled:opacity-50"
-              >
-                Ruota con 2 ore di grace
-              </button>
-              <button
-                type="button"
-                disabled={accessBusyId === accessTarget.id}
-                onClick={() => void rotateAccessServiceToken(accessTarget, false)}
-                className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-surface-0 disabled:opacity-50"
-              >
-                Invalida subito
-              </button>
-            </div>
-          </div>
-        </div>
+        <AccessRotateModal
+          target={accessTarget}
+          busyId={accessBusyId}
+          onCancel={() => setAccessTarget(null)}
+          onRotate={(grace) => void rotateAccessServiceToken(accessTarget, grace)}
+        />
       ) : null}
-
       {accessResult ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-lg rounded-2xl border border-amber-500/30 bg-surface-1 p-6 shadow-2xl">
-            <h3 className="text-sm font-semibold text-amber-100">Nuovo secret Access</h3>
-            <p className="mt-1 text-xs text-ink-muted">
-              Aggiorna subito i servizi che inviano gli header CF-Access-Client-ID e CF-Access-Client-Secret. Cloudflare mostra questo secret solo ora.
-            </p>
-            <p className="mt-2 text-sm text-ink">{accessResult.name}</p>
-            <p className="font-mono text-[11px] text-ink-muted">Client ID: {accessResult.clientId}</p>
-            <pre className="mt-3 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-surface-0 p-3 font-mono text-xs text-ink">
-              {accessResult.clientSecret}
-            </pre>
-            {accessCopyHint ? <p className="mt-2 text-xs text-accent">{accessCopyHint}</p> : null}
-            <div className="mt-4 flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => void handleCopyAccessSecret()}
-                className="rounded-lg border border-surface-3 px-3 py-1.5 text-sm text-ink hover:border-accent/40"
-              >
-                Copia secret
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAccessResult(null);
-                  setAccessCopyHint(null);
-                }}
-                className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-surface-0"
-              >
-                Chiudi
-              </button>
-            </div>
-          </div>
-        </div>
+        <AccessRotateResultModal
+          result={accessResult}
+          copyHint={accessCopyHint}
+          onCopy={() => void handleCopyAccessSecret()}
+          onClose={() => {
+            setAccessResult(null);
+            setAccessCopyHint(null);
+          }}
+        />
       ) : null}
-
       {turnstileResult ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="max-h-[88vh] w-full max-w-2xl overflow-auto rounded-2xl border border-amber-500/30 bg-surface-1 p-6 shadow-2xl">
-            <h3 className="text-sm font-semibold text-amber-100">Nuovo secret Turnstile</h3>
-            <p className="mt-1 text-xs text-ink-muted">
-              Aggiorna subito il backend che usa questo widget. Cloudflare mostra questo secret solo ora.
-            </p>
-            <p className="mt-2 text-sm text-ink">{turnstileResult.name}</p>
-            <p className="font-mono text-[11px] text-ink-muted">Sitekey: {turnstileResult.sitekey}</p>
-            <pre className="mt-3 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-surface-0 p-3 font-mono text-xs text-ink">
-              {turnstileResult.secret}
-            </pre>
-            {turnstileCopyHint ? <p className="mt-2 text-xs text-accent">{turnstileCopyHint}</p> : null}
-            <div className="mt-4 rounded-xl border border-surface-3/80 bg-surface-0/50 p-4">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                Aggiorna Worker secret
-              </h4>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <label className="space-y-1.5 text-xs font-semibold text-ink-muted">
-                  <span>Worker</span>
-                  <select
-                    value={selectedWorker}
-                    onChange={(e) => {
-                      setSelectedWorker(e.target.value);
-                      setWorkerSecretName("");
-                      setWorkerUpdateHint(null);
-                    }}
-                    className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
-                  >
-                    {workerScripts.length === 0 ? (
-                      <option value="">Nessun Worker rilevato</option>
-                    ) : (
-                      workerScripts.map((worker) => (
-                        <option key={worker.id} value={worker.id}>
-                          {worker.id}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                </label>
-                <label className="space-y-1.5 text-xs font-semibold text-ink-muted">
-                  <span>Binding secret</span>
-                  <input
-                    value={workerSecretName}
-                    onChange={(e) => {
-                      setWorkerSecretName(e.target.value);
-                      setWorkerUpdateHint(null);
-                    }}
-                    className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 font-mono text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
-                    placeholder="TURNSTILE_SECRET_KEY"
-                    list="cf-worker-secret-options"
-                    autoComplete="off"
-                  />
-                  <datalist id="cf-worker-secret-options">
-                    {workerSecrets.map((secret) => (
-                      <option key={secret.name} value={secret.name} />
-                    ))}
-                  </datalist>
-                </label>
-              </div>
-              {workerUpdateHint ? <p className="mt-2 text-xs text-accent">{workerUpdateHint}</p> : null}
-              <p className="mt-2 text-xs text-ink-muted">
-                Il valore viene scritto su Cloudflare Workers e non viene salvato nel database locale.
-              </p>
-              <div className="mt-3 flex justify-end">
-                <button
-                  type="button"
-                  disabled={workerBusy || !selectedWorker.trim() || !workerSecretName.trim()}
-                  onClick={() => void updateWorkerWithTurnstileSecret()}
-                  className="rounded-lg border border-accent/50 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10 disabled:opacity-50"
-                >
-                  {workerBusy ? "Aggiornamento..." : "Scrivi nel Worker"}
-                </button>
-              </div>
-            </div>
-            <div className="mt-3 rounded-xl border border-surface-3/80 bg-surface-0/50 p-4">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                Aggiorna Pages secret
-              </h4>
-              <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_130px]">
-                <label className="space-y-1.5 text-xs font-semibold text-ink-muted">
-                  <span>Progetto</span>
-                  <select
-                    value={selectedPagesProject}
-                    onChange={(e) => {
-                      setSelectedPagesProject(e.target.value);
-                      setPagesUpdateHint(null);
-                    }}
-                    className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
-                  >
-                    {pagesProjects.length === 0 ? (
-                      <option value="">Nessun progetto Pages</option>
-                    ) : (
-                      pagesProjects.map((project) => (
-                        <option key={project.name} value={project.name}>
-                          {project.name}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                </label>
-                <label className="space-y-1.5 text-xs font-semibold text-ink-muted">
-                  <span>Ambiente</span>
-                  <select
-                    value={pagesEnvironment}
-                    onChange={(e) => {
-                      setPagesEnvironment(e.target.value as "production" | "preview");
-                      setPagesUpdateHint(null);
-                    }}
-                    className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
-                  >
-                    <option value="production">production</option>
-                    <option value="preview">preview</option>
-                  </select>
-                </label>
-              </div>
-              <label className="mt-3 block space-y-1.5 text-xs font-semibold text-ink-muted">
-                <span>Nome secret</span>
-                <input
-                  value={pagesSecretName}
-                  onChange={(e) => {
-                    setPagesSecretName(e.target.value);
-                    setPagesUpdateHint(null);
-                  }}
-                  className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 font-mono text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
-                  placeholder="TURNSTILE_SECRET_KEY"
-                  autoComplete="off"
-                />
-              </label>
-              {pagesUpdateHint ? <p className="mt-2 text-xs text-accent">{pagesUpdateHint}</p> : null}
-              <p className="mt-2 text-xs text-ink-muted">
-                Pages usa questo valore nei nuovi deploy/build successivi.
-              </p>
-              <div className="mt-3 flex justify-end">
-                <button
-                  type="button"
-                  disabled={pagesBusy || !selectedPagesProject.trim() || !pagesSecretName.trim()}
-                  onClick={() => void updatePagesWithTurnstileSecret()}
-                  className="rounded-lg border border-accent/50 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10 disabled:opacity-50"
-                >
-                  {pagesBusy ? "Aggiornamento..." : "Scrivi in Pages"}
-                </button>
-              </div>
-            </div>
-            <div className="mt-3 rounded-xl border border-surface-3/80 bg-surface-0/50 p-4">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                Aggiorna Secrets Store
-              </h4>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <label className="space-y-1.5 text-xs font-semibold text-ink-muted">
-                  <span>Store</span>
-                  <select
-                    value={selectedSecretsStore}
-                    onChange={(e) => {
-                      setSelectedSecretsStore(e.target.value);
-                      setSecretsStoreSecretId("");
-                      setSecretsStoreUpdateHint(null);
-                    }}
-                    className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
-                  >
-                    {secretsStores.length === 0 ? (
-                      <option value="">Nessuno store</option>
-                    ) : (
-                      secretsStores.map((store) => (
-                        <option key={store.id} value={store.id}>
-                          {store.name}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                </label>
-                <label className="space-y-1.5 text-xs font-semibold text-ink-muted">
-                  <span>Secret</span>
-                  <input
-                    value={secretsStoreSecretName}
-                    onChange={(e) => {
-                      setSecretsStoreSecretName(e.target.value);
-                      setSecretsStoreSecretId("");
-                      setSecretsStoreUpdateHint(null);
-                    }}
-                    className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 font-mono text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
-                    placeholder="TURNSTILE_SECRET_KEY"
-                    autoComplete="off"
-                  />
-                </label>
-              </div>
-              <label className="mt-3 block space-y-1.5 text-xs font-semibold text-ink-muted">
-                <span>Scope</span>
-                <input
-                  value={secretsStoreScopes}
-                  onChange={(e) => setSecretsStoreScopes(e.target.value)}
-                  className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 font-mono text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
-                  placeholder="workers, access"
-                  autoComplete="off"
-                />
-              </label>
-              {secretsStoreUpdateHint ? <p className="mt-2 text-xs text-accent">{secretsStoreUpdateHint}</p> : null}
-              <p className="mt-2 text-xs text-ink-muted">
-                Se non selezioni un secret esistente, Rotate ne crea uno nuovo nello store scelto.
-              </p>
-              <div className="mt-3 flex justify-end">
-                <button
-                  type="button"
-                  disabled={secretsStoreBusy || !selectedSecretsStore.trim() || !secretsStoreSecretName.trim()}
-                  onClick={() => void updateSecretsStoreWithTurnstileSecret()}
-                  className="rounded-lg border border-accent/50 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10 disabled:opacity-50"
-                >
-                  {secretsStoreBusy ? "Aggiornamento..." : "Scrivi nello Store"}
-                </button>
-              </div>
-            </div>
-            <div className="mt-3 rounded-xl border border-surface-3/80 bg-surface-0/50 p-4">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                Aggiorna Vercel env
-              </h4>
-              {vercelIntegration ? (
-                <>
-                  <div className="mt-2 flex items-center justify-between gap-3">
-                    <p className="text-xs text-ink-muted">
-                      Usa il Vercel collegato per aggiornare una env var con il nuovo secret.
-                    </p>
-                    <button
-                      type="button"
-                      disabled={vercelBusy}
-                      onClick={() => void refreshVercelProjects()}
-                      className="rounded-lg border border-surface-3 px-2.5 py-1 text-xs font-medium text-ink-muted hover:border-accent/40 disabled:opacity-50"
-                    >
-                      Aggiorna progetti
-                    </button>
-                  </div>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <label className="space-y-1.5 text-xs font-semibold text-ink-muted">
-                      <span>Progetto</span>
-                      <select
-                        value={selectedVercelProjectId}
-                        onChange={(e) => {
-                          setSelectedVercelProjectId(e.target.value);
-                          setVercelUpdateHint(null);
-                        }}
-                        className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
-                      >
-                        {vercelProjects.length === 0 ? (
-                          <option value="">Nessun progetto Vercel</option>
-                        ) : (
-                          vercelProjects.map((project) => (
-                            <option key={project.id} value={project.id}>
-                              {project.name}
-                            </option>
-                          ))
-                        )}
-                      </select>
-                    </label>
-                    <label className="space-y-1.5 text-xs font-semibold text-ink-muted">
-                      <span>Env key</span>
-                      <input
-                        value={vercelEnvKey}
-                        onChange={(e) => {
-                          setVercelEnvKey(e.target.value);
-                          setVercelUpdateHint(null);
-                        }}
-                        className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 font-mono text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
-                        placeholder="TURNSTILE_SECRET_KEY"
-                        autoComplete="off"
-                      />
-                    </label>
-                  </div>
-                  <div className="mt-3">
-                    <DeployTargetsPicker selected={vercelTargets} onToggle={toggleVercelTarget} />
-                  </div>
-                  {vercelUpdateHint ? <p className="mt-2 text-xs text-accent">{vercelUpdateHint}</p> : null}
-                  <p className="mt-2 text-xs text-ink-muted">
-                    Vercel applica la variabile ai nuovi deploy successivi.
-                  </p>
-                  <div className="mt-3 flex justify-end">
-                    <button
-                      type="button"
-                      disabled={
-                        vercelBusy ||
-                        !selectedVercelProjectId ||
-                        !vercelEnvKey.trim() ||
-                        vercelTargets.length === 0
-                      }
-                      onClick={() => void updateVercelWithTurnstileSecret()}
-                      className="rounded-lg border border-accent/50 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10 disabled:opacity-50"
-                    >
-                      {vercelBusy ? "Aggiornamento..." : "Scrivi in Vercel"}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <p className="mt-2 text-xs text-ink-muted">
-                  Aggiungi e collega Vercel da Esplora per scrivere questo secret nei progetti Vercel.
-                </p>
-              )}
-            </div>
-            <div className="mt-3 rounded-xl border border-surface-3/80 bg-surface-0/50 p-4">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                Aggiorna Supabase secret
-              </h4>
-              {supabaseIntegration ? (
-                <>
-                  <div className="mt-2 flex items-center justify-between gap-3">
-                    <p className="text-xs text-ink-muted">
-                      Scrive il nuovo valore nei secret delle Edge Functions Supabase.
-                    </p>
-                    <button
-                      type="button"
-                      disabled={supabaseBusy}
-                      onClick={() => void refreshSupabaseProjects()}
-                      className="rounded-lg border border-surface-3 px-2.5 py-1 text-xs font-medium text-ink-muted hover:border-accent/40 disabled:opacity-50"
-                    >
-                      Aggiorna progetti
-                    </button>
-                  </div>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <label className="space-y-1.5 text-xs font-semibold text-ink-muted">
-                      <span>Progetto</span>
-                      <select
-                        value={selectedSupabaseProjectRef}
-                        onChange={(e) => {
-                          setSelectedSupabaseProjectRef(e.target.value);
-                          setSupabaseUpdateHint(null);
-                        }}
-                        className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
-                      >
-                        {supabaseProjects.length === 0 ? (
-                          <option value="">Nessun progetto Supabase</option>
-                        ) : (
-                          supabaseProjects.map((project) => (
-                            <option key={project.reference} value={project.reference}>
-                              {project.name}
-                            </option>
-                          ))
-                        )}
-                      </select>
-                    </label>
-                    <label className="space-y-1.5 text-xs font-semibold text-ink-muted">
-                      <span>Secret nuovo o non in elenco</span>
-                      <input
-                        value={supabaseSecretName}
-                        onChange={(e) => {
-                          setSupabaseSecretName(e.target.value);
-                          setSupabaseUpdateHint(null);
-                        }}
-                        className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 font-mono text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
-                        placeholder="TURNSTILE_SECRET_KEY"
-                        list="cf-supabase-secret-options"
-                        autoComplete="off"
-                      />
-                      <datalist id="cf-supabase-secret-options">
-                        {supabaseSecrets.map((secret) => (
-                          <option key={secret.name} value={secret.name} />
-                        ))}
-                      </datalist>
-                    </label>
-                  </div>
-                  {supabaseSecrets.length > 0 ? (
-                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-ink">
-                      {supabaseSecrets.map((secret) => (
-                        <label key={secret.name} className="flex items-center gap-1.5 rounded-lg border border-surface-3 px-2 py-1">
-                          <input
-                            type="checkbox"
-                            checked={selectedSupabaseSecretNames.includes(secret.name)}
-                            onChange={() => toggleSupabaseSecretName(secret.name)}
-                          />
-                          <span className="font-mono">{secret.name}</span>
-                        </label>
-                      ))}
-                    </div>
-                  ) : null}
-                  {supabaseUpdateHint ? <p className="mt-2 text-xs text-accent">{supabaseUpdateHint}</p> : null}
-                  <p className="mt-2 text-xs text-ink-muted">
-                    Supabase rende il valore disponibile subito alle Edge Functions.
-                  </p>
-                  <div className="mt-3 flex justify-end">
-                    <button
-                      type="button"
-                      disabled={supabaseBusy || !selectedSupabaseProjectRef || (selectedSupabaseSecretNames.length === 0 && !supabaseSecretName.trim())}
-                      onClick={() => void updateSupabaseWithTurnstileSecret()}
-                      className="rounded-lg border border-accent/50 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10 disabled:opacity-50"
-                    >
-                      {supabaseBusy ? "Aggiornamento..." : "Scrivi in Supabase"}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <p className="mt-2 text-xs text-ink-muted">
-                  Aggiungi e collega Supabase da Esplora per scrivere questo secret nelle Edge Functions.
-                </p>
-              )}
-            </div>
-            <div className="mt-4 flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => void handleCopyTurnstileSecret()}
-                className="rounded-lg border border-surface-3 px-3 py-1.5 text-sm text-ink hover:border-accent/40"
-              >
-                Copia secret
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setTurnstileResult(null);
-                  setTurnstileCopyHint(null);
-                  setWorkerUpdateHint(null);
-                  setPagesUpdateHint(null);
-                  setSecretsStoreUpdateHint(null);
-                  setVercelUpdateHint(null);
-                  setSupabaseUpdateHint(null);
-                }}
-                className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-surface-0"
-              >
-                Chiudi
-              </button>
-            </div>
-          </div>
-        </div>
+        <TurnstileRotateResultModal
+          result={turnstileResult}
+          copyHint={turnstileCopyHint}
+          onCopy={() => void handleCopyTurnstileSecret()}
+          onClose={() => {
+            setTurnstileResult(null);
+            setTurnstileCopyHint(null);
+            setWorkerUpdateHint(null);
+            setPagesUpdateHint(null);
+            setSecretsStoreUpdateHint(null);
+            setVercelUpdateHint(null);
+            setSupabaseUpdateHint(null);
+          }}
+          workerScripts={workerScripts}
+          workerSecrets={workerSecrets}
+          selectedWorker={selectedWorker}
+          workerSecretName={workerSecretName}
+          workerBusy={workerBusy}
+          workerUpdateHint={workerUpdateHint}
+          onWorkerChange={(value) => {
+            setSelectedWorker(value);
+            setWorkerSecretName("");
+            setWorkerUpdateHint(null);
+          }}
+          onWorkerSecretNameChange={(value) => {
+            setWorkerSecretName(value);
+            setWorkerUpdateHint(null);
+          }}
+          onWriteWorker={() => void updateWorkerWithTurnstileSecret()}
+          pagesProjects={pagesProjects}
+          selectedPagesProject={selectedPagesProject}
+          pagesEnvironment={pagesEnvironment}
+          pagesSecretName={pagesSecretName}
+          pagesBusy={pagesBusy}
+          pagesUpdateHint={pagesUpdateHint}
+          onPagesProjectChange={(value) => {
+            setSelectedPagesProject(value);
+            setPagesUpdateHint(null);
+          }}
+          onPagesEnvironmentChange={(value) => {
+            setPagesEnvironment(value);
+            setPagesUpdateHint(null);
+          }}
+          onPagesSecretNameChange={(value) => {
+            setPagesSecretName(value);
+            setPagesUpdateHint(null);
+          }}
+          onWritePages={() => void updatePagesWithTurnstileSecret()}
+          secretsStores={secretsStores}
+          selectedSecretsStore={selectedSecretsStore}
+          secretsStoreSecretName={secretsStoreSecretName}
+          secretsStoreScopes={secretsStoreScopes}
+          secretsStoreBusy={secretsStoreBusy}
+          secretsStoreUpdateHint={secretsStoreUpdateHint}
+          onSecretsStoreChange={(value) => {
+            setSelectedSecretsStore(value);
+            setSecretsStoreSecretId("");
+            setSecretsStoreUpdateHint(null);
+          }}
+          onSecretsStoreSecretNameChange={(value) => {
+            setSecretsStoreSecretName(value);
+            setSecretsStoreSecretId("");
+            setSecretsStoreUpdateHint(null);
+          }}
+          onSecretsStoreScopesChange={setSecretsStoreScopes}
+          onWriteSecretsStore={() => void updateSecretsStoreWithTurnstileSecret()}
+          hasVercelIntegration={Boolean(vercelIntegration)}
+          vercelProjects={vercelProjects}
+          selectedVercelProjectId={selectedVercelProjectId}
+          vercelEnvKey={vercelEnvKey}
+          vercelTargets={vercelTargets}
+          vercelBusy={vercelBusy}
+          vercelUpdateHint={vercelUpdateHint}
+          onRefreshVercelProjects={() => void refreshVercelProjects()}
+          onVercelProjectChange={(value) => {
+            setSelectedVercelProjectId(value);
+            setVercelUpdateHint(null);
+          }}
+          onVercelEnvKeyChange={(value) => {
+            setVercelEnvKey(value);
+            setVercelUpdateHint(null);
+          }}
+          onToggleVercelTarget={toggleVercelTarget}
+          onWriteVercel={() => void updateVercelWithTurnstileSecret()}
+          hasSupabaseIntegration={Boolean(supabaseIntegration)}
+          supabaseProjects={supabaseProjects}
+          supabaseSecrets={supabaseSecrets}
+          selectedSupabaseProjectRef={selectedSupabaseProjectRef}
+          supabaseSecretName={supabaseSecretName}
+          selectedSupabaseSecretNames={selectedSupabaseSecretNames}
+          supabaseBusy={supabaseBusy}
+          supabaseUpdateHint={supabaseUpdateHint}
+          onRefreshSupabaseProjects={() => void refreshSupabaseProjects()}
+          onSupabaseProjectChange={(value) => {
+            setSelectedSupabaseProjectRef(value);
+            setSupabaseUpdateHint(null);
+          }}
+          onSupabaseSecretNameChange={(value) => {
+            setSupabaseSecretName(value);
+            setSupabaseUpdateHint(null);
+          }}
+          onToggleSupabaseSecretName={toggleSupabaseSecretName}
+          onWriteSupabase={() => void updateSupabaseWithTurnstileSecret()}
+        />
       ) : null}
-
       {revealOpen && revealedToken ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-lg rounded-2xl border border-amber-500/30 bg-surface-1 p-6 shadow-2xl">
-            <h3 className="text-sm font-semibold text-amber-100">{t("cloudflare.revealTitle")}</h3>
-            <p className="mt-1 text-xs text-ink-muted">{t("cloudflare.revealLead")}</p>
-            <pre className="mt-4 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-surface-0 p-3 font-mono text-xs text-ink">
-              {revealedToken}
-            </pre>
-            {copyHint ? <p className="mt-2 text-xs text-accent">{copyHint}</p> : null}
-            <div className="mt-4 flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => void handleCopySecret()}
-                className="rounded-lg border border-surface-3 px-3 py-1.5 text-sm text-ink hover:border-accent/40"
-              >
-                {t("cloudflare.copyAuto")}
-              </button>
-              <button
-                type="button"
-                onClick={closeReveal}
-                className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-surface-0"
-              >
-                {t("cloudflare.close")}
-              </button>
-            </div>
-          </div>
-        </div>
+        <RevealManagedTokenModal
+          token={revealedToken}
+          copyHint={copyHint}
+          onCopy={() => void handleCopySecret()}
+          onClose={closeReveal}
+        />
       ) : null}
     </div>
   );

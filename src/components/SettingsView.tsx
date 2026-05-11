@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { SecurityStatusDto } from "../types";
 import { VAULT_MIN_PIN_LENGTH } from "../vaultConstants";
+import { errText } from "./provider/errors";
 
 const MIN_MINUTES = 1;
 const MAX_MINUTES = 480;
@@ -11,12 +12,6 @@ type Props = {
   sessionTtlSeconds: number;
   onVaultUpdated: (s: SecurityStatusDto) => void;
 };
-
-function errText(e: unknown): string {
-  if (typeof e === "string") return e;
-  if (e && typeof e === "object" && "message" in e) return String((e as { message: unknown }).message);
-  return String(e);
-}
 
 export function SettingsView({ sessionTtlSeconds, onVaultUpdated }: Props) {
   const { t } = useTranslation();

@@ -39,6 +39,14 @@ pub struct VercelAccountDto {
     pub team_id: Option<String>,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OauthClientDto {
+    pub integration_id: String,
+    pub client_id: String,
+    pub label: Option<String>,
+}
+
 fn now_ms() -> Result<i64, String> {
     Ok(std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -79,6 +87,13 @@ fn migrate(conn: &Connection) -> Result<(), String> {
             user_id TEXT NOT NULL,
             user_email TEXT,
             team_id TEXT,
+            FOREIGN KEY (integration_id) REFERENCES integrations(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS oauth_clients (
+            integration_id TEXT PRIMARY KEY NOT NULL,
+            client_id TEXT NOT NULL,
+            label TEXT,
             FOREIGN KEY (integration_id) REFERENCES integrations(id) ON DELETE CASCADE
         );
 
@@ -244,7 +259,7 @@ pub fn list_integrations(app: &AppHandle) -> Result<Vec<IntegrationDto>, String>
 
 fn validate_provider(provider: &str) -> Result<(), String> {
     match provider {
-        "cloudflare" | "vercel" | "supabase" | "oauth_google" => Ok(()),
+        "cloudflare" | "vercel" | "supabase" | "resend" | "oauth_google" => Ok(()),
         _ => Err("Provider non supportato".into()),
     }
 }
@@ -395,6 +410,62 @@ pub fn delete_vercel_account_row(app: &AppHandle, integration_id: &str) -> Resul
     Ok(())
 }
 
+pub fn upsert_oauth_client(
+    app: &AppHandle,
+    integration_id: &str,
+    client_id: &str,
+    label: Option<&str>,
+) -> Result<(), String> {
+    let conn = open_conn(app)?;
+    conn.execute(
+        r#"
+        INSERT INTO oauth_clients (integration_id, client_id, label)
+        VALUES (?1, ?2, ?3)
+        ON CONFLICT(integration_id) DO UPDATE SET
+            client_id = excluded.client_id,
+            label = excluded.label
+        "#,
+        params![integration_id, client_id, label],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub fn get_oauth_client(
+    app: &AppHandle,
+    integration_id: &str,
+) -> Result<Option<OauthClientDto>, String> {
+    let conn = open_conn(app)?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT integration_id, client_id, label FROM oauth_clients WHERE integration_id = ?1",
+        )
+        .map_err(|e| e.to_string())?;
+    let mut rows = stmt
+        .query_map(params![integration_id], |row| {
+            Ok(OauthClientDto {
+                integration_id: row.get(0)?,
+                client_id: row.get(1)?,
+                label: row.get(2)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+    match rows.next() {
+        Some(r) => Ok(Some(r.map_err(|e| e.to_string())?)),
+        None => Ok(None),
+    }
+}
+
+pub fn delete_oauth_client_row(app: &AppHandle, integration_id: &str) -> Result<(), String> {
+    let conn = open_conn(app)?;
+    conn.execute(
+        "DELETE FROM oauth_clients WHERE integration_id = ?1",
+        params![integration_id],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 pub fn add_integration(
     app: &AppHandle,
     provider: &str,
@@ -422,6 +493,16 @@ pub fn add_integration(
         label: label.to_string(),
         created_at,
     })
+}
+
+pub fn delete_integration(app: &AppHandle, integration_id: &str) -> Result<(), String> {
+    let conn = open_conn(app)?;
+    conn.execute(
+        "DELETE FROM integrations WHERE id = ?1",
+        params![integration_id],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 pub fn list_managed_secrets(

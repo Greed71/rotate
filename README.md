@@ -29,8 +29,9 @@ The current focus is Cloudflare plus deployment destinations: link management to
 - **Vercel environment updates**: connect a Vercel Access Token, list projects, inspect environment variable names, and upsert an encrypted environment variable after a Turnstile rotation.
 - **Supabase API key rotation**: connect a Supabase Personal Access Token, list project API keys, create a Supabase-generated replacement key, show it once, and optionally delete the old key.
 - **Supabase Edge Function secrets**: list project secret names and bulk-update selected Edge Function secrets with a value produced by another rotation flow.
+- **Resend API key rotation**: connect a Resend management API key, list API keys, create a replacement key, show it once, and optionally delete the old key.
+- **Google OAuth assisted rotation**: store a Google OAuth Client ID and client secret locally, replace the secret generated from Google Cloud Console, and push it to deployment env vars.
 - **Clipboard safety**: sensitive values copied from the app are auto-cleared where supported.
-- **Provider scaffolding**: Google OAuth is present as a future provider slot.
 
 ---
 
@@ -80,6 +81,8 @@ Rotate is local-first. There is no backend service and no cloud sync.
 | Vercel destination updates | Sent directly to Vercel project environment variables; the secret value is not stored locally |
 | Supabase destination updates | Sent directly to Supabase Edge Function secrets; the secret value is not stored locally |
 | Supabase database password | Generated locally for the rotation request, shown once as password and direct `DATABASE_URL`, never stored locally |
+| Resend management token | OS credential store when reliable; otherwise DPAPI-encrypted local file on Windows |
+| Google OAuth client secret | OS credential store when reliable; otherwise DPAPI-encrypted local file on Windows |
 | Metadata | SQLite app data directory (`rotate.db`) |
 
 The vault password must be at least 12 characters. Under 16 characters, Rotate requires a mix across character classes and rejects common predictable fragments. Backend validation enforces this; the frontend checks are only ergonomic.
@@ -284,6 +287,31 @@ Cloudflare Secrets Store never returns the secret value after write. Rotate stor
 6. Click **Write to Vercel**.
 
 Rotate calls Vercel's environment variable API with `upsert=true` and stores no copy of the rotated secret. Vercel applies the value to future deployments/builds.
+
+### Rotate a Resend API Key
+
+1. Add Resend from Explore.
+2. Create or copy a Resend API key with enough permission to list, create, and delete API keys.
+3. Paste it into Rotate as the local management key.
+4. Open the Resend detail view.
+5. Pick an existing API key and click **Rotate**, or create a new key.
+6. Rotate asks Resend for a new key, shows the token once, and can write it to Vercel as `RESEND_API_KEY`.
+7. Delete the old key only after the new value is deployed everywhere.
+
+Resend does not expose an existing API key value after creation. Rotate shows only the newly created value returned by Resend.
+
+### Manage a Google OAuth Client Secret
+
+Google OAuth client secret rotation is assisted rather than fully automatic.
+
+1. Add OAuth (Google) from Explore.
+2. Open Google Auth Platform Clients and select the OAuth client.
+3. Use **Add Secret** in Google Cloud Console to generate a new client secret.
+4. Paste the Client ID and new Client Secret into Rotate.
+5. Write the new value to Vercel as `GOOGLE_CLIENT_SECRET`, or copy it for another destination.
+6. After the new deployment is working, disable and delete the old secret in Google Cloud Console.
+
+Rotate stores the Client ID as metadata and the Client Secret in local secure storage. It does not create Google OAuth secrets itself because Google exposes that flow primarily through Google Cloud Console.
 
 ### Rotate a Supabase API Key
 

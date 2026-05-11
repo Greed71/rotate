@@ -2,12 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { VAULT_MIN_PIN_LENGTH } from "../../vaultConstants";
-
-function errText(e: unknown): string {
-  if (typeof e === "string") return e;
-  if (e && typeof e === "object" && "message" in e) return String((e as { message: unknown }).message);
-  return String(e);
-}
+import { errText } from "../provider/errors";
 
 type Props = {
   open: boolean;
