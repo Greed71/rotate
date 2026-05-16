@@ -56,6 +56,48 @@ export function ExploreView({ integrations, onAdd }: Props) {
         automation: "partial",
         envHints: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
       },
+      {
+        id: "github",
+        name: t("providers.github.title"),
+        blurb: t("providers.github.blurb"),
+        automation: "partial",
+        envHints: ["ACTIONS_SECRET", "TURNSTILE_SECRET_KEY"],
+      },
+      {
+        id: "stripe",
+        name: t("providers.stripe.title"),
+        blurb: t("providers.stripe.blurb"),
+        automation: "manual",
+        envHints: ["STRIPE_SECRET_KEY", "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"],
+      },
+      {
+        id: "paypal",
+        name: t("providers.paypal.title"),
+        blurb: t("providers.paypal.blurb"),
+        automation: "manual",
+        envHints: ["PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET"],
+      },
+      {
+        id: "facebook",
+        name: t("providers.facebook.title"),
+        blurb: t("providers.facebook.blurb"),
+        automation: "manual",
+        envHints: ["FACEBOOK_APP_ID", "FACEBOOK_APP_SECRET"],
+      },
+      {
+        id: "discord",
+        name: t("providers.discord.title"),
+        blurb: t("providers.discord.blurb"),
+        automation: "manual",
+        envHints: ["DISCORD_CLIENT_ID", "DISCORD_BOT_TOKEN"],
+      },
+      {
+        id: "twitch",
+        name: t("providers.twitch.title"),
+        blurb: t("providers.twitch.blurb"),
+        automation: "manual",
+        envHints: ["TWITCH_CLIENT_ID", "TWITCH_CLIENT_SECRET"],
+      },
     ],
     [t],
   );
@@ -129,11 +171,10 @@ export function ExploreView({ integrations, onAdd }: Props) {
               <div className="mt-6 flex items-center justify-end gap-2">
                 <button
                   type="button"
-                  disabled={isAdded}
                   onClick={() => onAdd(item.id)}
-                  className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-surface-0 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-surface-0 transition hover:brightness-110"
                 >
-                  {isAdded ? t("explore.inPool") : t("explore.add")}
+                  {isAdded ? t("explore.open") : t("explore.add")}
                 </button>
               </div>
             </article>

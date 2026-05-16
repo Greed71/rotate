@@ -1,3 +1,5 @@
+﻿import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { DeployTarget } from "../../secretDestinations";
 import type {
   PagesProjectRow,
@@ -57,6 +59,25 @@ type Props = {
   onVercelEnvKeyChange: (value: string) => void;
   onToggleVercelTarget: (target: DeployTarget) => void;
   onWriteVercel: () => void;
+  localEnvPath: string;
+  localEnvKeys: string[];
+  localEnvKey: string;
+  localEnvBusy: boolean;
+  localEnvUpdateHint: string | null;
+  onLocalEnvPathChange: (value: string) => void;
+  onInspectLocalEnv: () => void;
+  onLocalEnvKeyChange: (value: string) => void;
+  onWriteLocalEnv: () => void;
+  hasGithubIntegration: boolean;
+  githubOwner: string;
+  githubRepo: string;
+  githubSecretName: string;
+  githubBusy: boolean;
+  githubUpdateHint: string | null;
+  onGithubOwnerChange: (value: string) => void;
+  onGithubRepoChange: (value: string) => void;
+  onGithubSecretNameChange: (value: string) => void;
+  onWriteGithub: () => void;
   hasSupabaseIntegration: boolean;
   supabaseProjects: SupabaseProjectRow[];
   supabaseSecrets: SupabaseSecretRow[];
@@ -70,6 +91,17 @@ type Props = {
   onSupabaseSecretNameChange: (value: string) => void;
   onToggleSupabaseSecretName: (value: string) => void;
   onWriteSupabase: () => void;
+  includeVercel: boolean;
+  includeSupabase: boolean;
+  includeLocalEnv: boolean;
+  includeGithub: boolean;
+  batchBusy: boolean;
+  batchHint: string | null;
+  onIncludeVercelChange: (value: boolean) => void;
+  onIncludeSupabaseChange: (value: boolean) => void;
+  onIncludeLocalEnvChange: (value: boolean) => void;
+  onIncludeGithubChange: (value: boolean) => void;
+  onApplySelected: () => void;
 };
 
 export function TurnstileRotateResultModal({
@@ -118,6 +150,25 @@ export function TurnstileRotateResultModal({
   onVercelEnvKeyChange,
   onToggleVercelTarget,
   onWriteVercel,
+  localEnvPath,
+  localEnvKeys,
+  localEnvKey,
+  localEnvBusy,
+  localEnvUpdateHint,
+  onLocalEnvPathChange,
+  onInspectLocalEnv,
+  onLocalEnvKeyChange,
+  onWriteLocalEnv,
+  hasGithubIntegration,
+  githubOwner,
+  githubRepo,
+  githubSecretName,
+  githubBusy,
+  githubUpdateHint,
+  onGithubOwnerChange,
+  onGithubRepoChange,
+  onGithubSecretNameChange,
+  onWriteGithub,
   hasSupabaseIntegration,
   supabaseProjects,
   supabaseSecrets,
@@ -131,13 +182,28 @@ export function TurnstileRotateResultModal({
   onSupabaseSecretNameChange,
   onToggleSupabaseSecretName,
   onWriteSupabase,
+  includeVercel,
+  includeSupabase,
+  includeLocalEnv,
+  includeGithub,
+  batchBusy,
+  batchHint,
+  onIncludeVercelChange,
+  onIncludeSupabaseChange,
+  onIncludeLocalEnvChange,
+  onIncludeGithubChange,
+  onApplySelected,
 }: Props) {
+  const { t } = useTranslation();
+  const [propagationOpen, setPropagationOpen] = useState(false);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-      <div className="max-h-[88vh] w-full max-w-2xl overflow-auto rounded-2xl border border-amber-500/30 bg-surface-1 p-6 shadow-2xl">
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+        <div className="w-full max-w-lg rounded-2xl border border-amber-500/30 bg-surface-1 p-6 shadow-2xl">
         <h3 className="text-sm font-semibold text-amber-100">Nuovo secret Turnstile</h3>
         <p className="mt-1 text-xs text-ink-muted">
-          Aggiorna subito il backend che usa questo widget. Cloudflare mostra questo secret solo ora.
+          {t("cloudflareTurnstile.resultLead")}
         </p>
         <p className="mt-2 text-sm text-ink">{result.name}</p>
         <p className="font-mono text-[11px] text-ink-muted">Sitekey: {result.sitekey}</p>
@@ -146,9 +212,124 @@ export function TurnstileRotateResultModal({
         </pre>
         {copyHint ? <p className="mt-2 text-xs text-accent">{copyHint}</p> : null}
 
+        <div className="mt-4 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setPropagationOpen(true)}
+            className="rounded-lg border border-accent/50 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10"
+          >
+            {t("propagation.title")}
+          </button>
+        </div>
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCopy}
+            className="rounded-lg border border-surface-3 px-3 py-1.5 text-sm text-ink hover:border-accent/40"
+          >
+            {t("manualProviders.copySecret")}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-surface-0"
+          >
+            {t("common.close")}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    {propagationOpen ? (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 px-4">
+        <div className="max-h-[88vh] w-full max-w-3xl overflow-auto rounded-2xl border border-accent/35 bg-surface-1 p-6 shadow-2xl">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-accent">{t("propagation.title")}</h3>
+              <p className="mt-1 text-xs text-ink-muted">
+                Scegli una o piu destinazioni da allineare con il nuovo secret Turnstile.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPropagationOpen(false)}
+              className="rounded-lg border border-surface-3 px-3 py-1.5 text-sm text-ink hover:border-accent/40"
+            >
+              {t("common.close")}
+            </button>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-accent/30 bg-accent/5 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-accent">
+                {t("propagation.batchTitle")}
+              </h4>
+              <p className="mt-1 text-xs text-ink-muted">
+                {t("cloudflareTurnstile.propagationLead")}
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={
+                batchBusy ||
+                (!includeVercel && !includeSupabase && !includeLocalEnv && !includeGithub)
+              }
+              onClick={onApplySelected}
+              className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-surface-0 disabled:opacity-50"
+            >
+              {batchBusy ? t("propagation.applying") : t("propagation.applySelected")}
+            </button>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs text-ink">
+            <label className="flex items-center gap-1.5 rounded-lg border border-surface-3 px-2 py-1">
+              <input
+                type="checkbox"
+                checked={includeVercel}
+                disabled={!hasVercelIntegration}
+                onChange={(event) => onIncludeVercelChange(event.target.checked)}
+              />
+              <span className={!hasVercelIntegration ? "text-ink-muted" : undefined}>
+                Vercel
+              </span>
+            </label>
+            <label className="flex items-center gap-1.5 rounded-lg border border-surface-3 px-2 py-1">
+              <input
+                type="checkbox"
+                checked={includeSupabase}
+                disabled={!hasSupabaseIntegration}
+                onChange={(event) => onIncludeSupabaseChange(event.target.checked)}
+              />
+              <span className={!hasSupabaseIntegration ? "text-ink-muted" : undefined}>
+                Supabase
+              </span>
+            </label>
+            <label className="flex items-center gap-1.5 rounded-lg border border-surface-3 px-2 py-1">
+              <input
+                type="checkbox"
+                checked={includeLocalEnv}
+                onChange={(event) => onIncludeLocalEnvChange(event.target.checked)}
+              />
+              <span>{t("propagation.localEnv")}</span>
+            </label>
+            <label className="flex items-center gap-1.5 rounded-lg border border-surface-3 px-2 py-1">
+              <input
+                type="checkbox"
+                checked={includeGithub}
+                disabled={!hasGithubIntegration}
+                onChange={(event) => onIncludeGithubChange(event.target.checked)}
+              />
+              <span className={!hasGithubIntegration ? "text-ink-muted" : undefined}>
+                GitHub
+              </span>
+            </label>
+          </div>
+          {batchHint ? <p className="mt-2 text-xs text-accent">{batchHint}</p> : null}
+        </div>
+
         <div className="mt-4 rounded-xl border border-surface-3/80 bg-surface-0/50 p-4">
           <h4 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-            Aggiorna Worker secret
+            {t("cloudflareTurnstile.workerTitle")}
           </h4>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <label className="space-y-1.5 text-xs font-semibold text-ink-muted">
@@ -159,7 +340,7 @@ export function TurnstileRotateResultModal({
                 className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
               >
                 {workerScripts.length === 0 ? (
-                  <option value="">Nessun Worker rilevato</option>
+                  <option value="">{t("cloudflareTurnstile.noWorkers")}</option>
                 ) : (
                   workerScripts.map((worker) => (
                     <option key={worker.id} value={worker.id}>
@@ -188,7 +369,7 @@ export function TurnstileRotateResultModal({
           </div>
           {workerUpdateHint ? <p className="mt-2 text-xs text-accent">{workerUpdateHint}</p> : null}
           <p className="mt-2 text-xs text-ink-muted">
-            Il valore viene scritto su Cloudflare Workers e non viene salvato nel database locale.
+            {t("cloudflareTurnstile.workerLead")}
           </p>
           <div className="mt-3 flex justify-end">
             <button
@@ -197,25 +378,25 @@ export function TurnstileRotateResultModal({
               onClick={onWriteWorker}
               className="rounded-lg border border-accent/50 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10 disabled:opacity-50"
             >
-              {workerBusy ? "Aggiornamento..." : "Scrivi nel Worker"}
+              {workerBusy ? t("common.updating") : t("cloudflareTurnstile.writeWorker")}
             </button>
           </div>
         </div>
 
         <div className="mt-3 rounded-xl border border-surface-3/80 bg-surface-0/50 p-4">
           <h4 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-            Aggiorna Pages secret
+            {t("cloudflareTurnstile.pagesTitle")}
           </h4>
           <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_130px]">
             <label className="space-y-1.5 text-xs font-semibold text-ink-muted">
-              <span>Progetto</span>
+              <span>{t("propagation.project")}</span>
               <select
                 value={selectedPagesProject}
                 onChange={(event) => onPagesProjectChange(event.target.value)}
                 className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
               >
                 {pagesProjects.length === 0 ? (
-                  <option value="">Nessun progetto Pages</option>
+                  <option value="">{t("cloudflareTurnstile.noPagesProjects")}</option>
                 ) : (
                   pagesProjects.map((project) => (
                     <option key={project.name} value={project.name}>
@@ -251,7 +432,7 @@ export function TurnstileRotateResultModal({
           </label>
           {pagesUpdateHint ? <p className="mt-2 text-xs text-accent">{pagesUpdateHint}</p> : null}
           <p className="mt-2 text-xs text-ink-muted">
-            Pages usa questo valore nei nuovi deploy/build successivi.
+            {t("cloudflareTurnstile.pagesLead")}
           </p>
           <div className="mt-3 flex justify-end">
             <button
@@ -260,14 +441,14 @@ export function TurnstileRotateResultModal({
               onClick={onWritePages}
               className="rounded-lg border border-accent/50 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10 disabled:opacity-50"
             >
-              {pagesBusy ? "Aggiornamento..." : "Scrivi in Pages"}
+              {pagesBusy ? t("common.updating") : t("cloudflareTurnstile.writePages")}
             </button>
           </div>
         </div>
 
         <div className="mt-3 rounded-xl border border-surface-3/80 bg-surface-0/50 p-4">
           <h4 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-            Aggiorna Secrets Store
+            {t("cloudflareTurnstile.secretsStoreTitle")}
           </h4>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <label className="space-y-1.5 text-xs font-semibold text-ink-muted">
@@ -278,7 +459,7 @@ export function TurnstileRotateResultModal({
                 className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
               >
                 {secretsStores.length === 0 ? (
-                  <option value="">Nessuno store</option>
+                  <option value="">{t("cloudflareTurnstile.noStores")}</option>
                 ) : (
                   secretsStores.map((store) => (
                     <option key={store.id} value={store.id}>
@@ -313,7 +494,7 @@ export function TurnstileRotateResultModal({
             <p className="mt-2 text-xs text-accent">{secretsStoreUpdateHint}</p>
           ) : null}
           <p className="mt-2 text-xs text-ink-muted">
-            Se non selezioni un secret esistente, Rotate ne crea uno nuovo nello store scelto.
+            {t("cloudflareTurnstile.secretsStoreLead")}
           </p>
           <div className="mt-3 flex justify-end">
             <button
@@ -326,14 +507,14 @@ export function TurnstileRotateResultModal({
               onClick={onWriteSecretsStore}
               className="rounded-lg border border-accent/50 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10 disabled:opacity-50"
             >
-              {secretsStoreBusy ? "Aggiornamento..." : "Scrivi nello Store"}
+              {secretsStoreBusy ? t("common.updating") : t("cloudflareTurnstile.writeStore")}
             </button>
           </div>
         </div>
 
         <div className="mt-3 rounded-xl border border-surface-3/80 bg-surface-0/50 p-4">
           <h4 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-            Aggiorna Vercel env
+            {t("propagation.vercelTitle")}
           </h4>
           {hasVercelIntegration ? (
             <>
@@ -347,19 +528,19 @@ export function TurnstileRotateResultModal({
                   onClick={onRefreshVercelProjects}
                   className="rounded-lg border border-surface-3 px-2.5 py-1 text-xs font-medium text-ink-muted hover:border-accent/40 disabled:opacity-50"
                 >
-                  Aggiorna progetti
+                  {t("propagation.refreshProjects")}
                 </button>
               </div>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <label className="space-y-1.5 text-xs font-semibold text-ink-muted">
-                  <span>Progetto</span>
+                  <span>{t("propagation.project")}</span>
                   <select
                     value={selectedVercelProjectId}
                     onChange={(event) => onVercelProjectChange(event.target.value)}
                     className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
                   >
                     {vercelProjects.length === 0 ? (
-                      <option value="">Nessun progetto Vercel</option>
+                      <option value="">{t("propagation.noVercelProjects")}</option>
                     ) : (
                       vercelProjects.map((project) => (
                         <option key={project.id} value={project.id}>
@@ -399,7 +580,7 @@ export function TurnstileRotateResultModal({
                   onClick={onWriteVercel}
                   className="rounded-lg border border-accent/50 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10 disabled:opacity-50"
                 >
-                  {vercelBusy ? "Aggiornamento..." : "Scrivi in Vercel"}
+                  {vercelBusy ? t("common.updating") : t("propagation.writeVercel")}
                 </button>
               </div>
             </>
@@ -412,7 +593,138 @@ export function TurnstileRotateResultModal({
 
         <div className="mt-3 rounded-xl border border-surface-3/80 bg-surface-0/50 p-4">
           <h4 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-            Aggiorna Supabase secret
+            {t("propagation.localEnvTitle")}
+          </h4>
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <p className="text-xs text-ink-muted">
+              {t("cloudflareTurnstile.localEnvLead")}
+            </p>
+            <button
+              type="button"
+              disabled={localEnvBusy || !localEnvPath.trim()}
+              onClick={onInspectLocalEnv}
+              className="rounded-lg border border-surface-3 px-2.5 py-1 text-xs font-medium text-ink-muted hover:border-accent/40 disabled:opacity-50"
+            >
+              {t("propagation.readKeys")}
+            </button>
+          </div>
+          <label className="mt-3 block space-y-1.5 text-xs font-semibold text-ink-muted">
+            <span>{t("propagation.envFile")}</span>
+            <input
+              value={localEnvPath}
+              onChange={(event) => onLocalEnvPathChange(event.target.value)}
+              className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 font-mono text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
+              placeholder="C:\\path\\project\\.env.local"
+              autoComplete="off"
+            />
+          </label>
+          <label className="mt-3 block space-y-1.5 text-xs font-semibold text-ink-muted">
+            <span>{t("propagation.variable")}</span>
+            <input
+              value={localEnvKey}
+              onChange={(event) => onLocalEnvKeyChange(event.target.value)}
+              className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 font-mono text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
+              placeholder="TURNSTILE_SECRET_KEY"
+              list="cf-local-env-key-options"
+              autoComplete="off"
+            />
+            <datalist id="cf-local-env-key-options">
+              {localEnvKeys.map((key) => (
+                <option key={key} value={key} />
+              ))}
+            </datalist>
+          </label>
+          {localEnvUpdateHint ? (
+            <p className="mt-2 text-xs text-accent">{localEnvUpdateHint}</p>
+          ) : null}
+          <p className="mt-2 text-xs text-ink-muted">
+            Il valore viene scritto nel file locale e non viene salvato nel database di Rotate.
+          </p>
+          <div className="mt-3 flex justify-end">
+            <button
+              type="button"
+              disabled={localEnvBusy || !localEnvPath.trim() || !localEnvKey.trim()}
+              onClick={onWriteLocalEnv}
+              className="rounded-lg border border-accent/50 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10 disabled:opacity-50"
+            >
+              {localEnvBusy ? t("common.updating") : t("propagation.writeLocalEnv")}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-3 rounded-xl border border-surface-3/80 bg-surface-0/50 p-4">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+            {t("propagation.githubTitle")}
+          </h4>
+          {hasGithubIntegration ? (
+            <>
+              <p className="mt-2 text-xs text-ink-muted">
+                {t("cloudflareTurnstile.githubLead")}
+              </p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <label className="space-y-1.5 text-xs font-semibold text-ink-muted">
+                  <span>{t("propagation.githubOwner")}</span>
+                  <input
+                    value={githubOwner}
+                    onChange={(event) => onGithubOwnerChange(event.target.value)}
+                    className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 font-mono text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
+                    placeholder="owner"
+                    autoComplete="off"
+                  />
+                </label>
+                <label className="space-y-1.5 text-xs font-semibold text-ink-muted">
+                  <span>{t("propagation.githubRepo")}</span>
+                  <input
+                    value={githubRepo}
+                    onChange={(event) => onGithubRepoChange(event.target.value)}
+                    className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 font-mono text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
+                    placeholder="repo"
+                    autoComplete="off"
+                  />
+                </label>
+              </div>
+              <label className="mt-3 block space-y-1.5 text-xs font-semibold text-ink-muted">
+                <span>{t("propagation.githubSecretName")}</span>
+                <input
+                  value={githubSecretName}
+                  onChange={(event) => onGithubSecretNameChange(event.target.value)}
+                  className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 font-mono text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
+                  placeholder="TURNSTILE_SECRET_KEY"
+                  autoComplete="off"
+                />
+              </label>
+              {githubUpdateHint ? (
+                <p className="mt-2 text-xs text-accent">{githubUpdateHint}</p>
+              ) : null}
+              <p className="mt-2 text-xs text-ink-muted">
+                Il secret viene cifrato con la public key GitHub prima dell'invio.
+              </p>
+              <div className="mt-3 flex justify-end">
+                <button
+                  type="button"
+                  disabled={
+                    githubBusy ||
+                    !githubOwner.trim() ||
+                    !githubRepo.trim() ||
+                    !githubSecretName.trim()
+                  }
+                  onClick={onWriteGithub}
+                  className="rounded-lg border border-accent/50 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10 disabled:opacity-50"
+                >
+                  {githubBusy ? t("common.updating") : t("propagation.writeGithub")}
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="mt-2 text-xs text-ink-muted">
+              Aggiungi e collega GitHub da Esplora per scrivere questo secret nei repository.
+            </p>
+          )}
+        </div>
+
+        <div className="mt-3 rounded-xl border border-surface-3/80 bg-surface-0/50 p-4">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+            {t("cloudflareTurnstile.supabaseTitle")}
           </h4>
           {hasSupabaseIntegration ? (
             <>
@@ -426,19 +738,19 @@ export function TurnstileRotateResultModal({
                   onClick={onRefreshSupabaseProjects}
                   className="rounded-lg border border-surface-3 px-2.5 py-1 text-xs font-medium text-ink-muted hover:border-accent/40 disabled:opacity-50"
                 >
-                  Aggiorna progetti
+                  {t("propagation.refreshProjects")}
                 </button>
               </div>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <label className="space-y-1.5 text-xs font-semibold text-ink-muted">
-                  <span>Progetto</span>
+                  <span>{t("propagation.project")}</span>
                   <select
                     value={selectedSupabaseProjectRef}
                     onChange={(event) => onSupabaseProjectChange(event.target.value)}
                     className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
                   >
                     {supabaseProjects.length === 0 ? (
-                      <option value="">Nessun progetto Supabase</option>
+                      <option value="">{t("supabase.noProjects")}</option>
                     ) : (
                       supabaseProjects.map((project) => (
                         <option key={project.reference} value={project.reference}>
@@ -449,7 +761,7 @@ export function TurnstileRotateResultModal({
                   </select>
                 </label>
                 <label className="space-y-1.5 text-xs font-semibold text-ink-muted">
-                  <span>Secret nuovo o non in elenco</span>
+                  <span>{t("cloudflareTurnstile.supabaseSecretName")}</span>
                   <input
                     value={supabaseSecretName}
                     onChange={(event) => onSupabaseSecretNameChange(event.target.value)}
@@ -499,7 +811,7 @@ export function TurnstileRotateResultModal({
                   onClick={onWriteSupabase}
                   className="rounded-lg border border-accent/50 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10 disabled:opacity-50"
                 >
-                  {supabaseBusy ? "Aggiornamento..." : "Scrivi in Supabase"}
+                  {supabaseBusy ? t("common.updating") : t("cloudflareTurnstile.writeSupabase")}
                 </button>
               </div>
             </>
@@ -510,23 +822,10 @@ export function TurnstileRotateResultModal({
           )}
         </div>
 
-        <div className="mt-4 flex flex-wrap justify-end gap-2">
-          <button
-            type="button"
-            onClick={onCopy}
-            className="rounded-lg border border-surface-3 px-3 py-1.5 text-sm text-ink hover:border-accent/40"
-          >
-            Copia secret
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-surface-0"
-          >
-            Chiudi
-          </button>
+
         </div>
       </div>
-    </div>
+    ) : null}
+  </>
   );
 }

@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { DeployTarget } from "../secretDestinations";
 import type { Integration, VercelEnvVarRow, VercelProjectRow, VercelStatusDto } from "../types";
 import { AlertMessage } from "./provider/AlertMessage";
@@ -16,6 +17,7 @@ type Props = {
 };
 
 export function VercelDetail({ integration, onBack }: Props) {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<VercelStatusDto | null>(null);
   const [apiToken, setApiToken] = useState("");
   const [teamId, setTeamId] = useState("");
@@ -164,7 +166,7 @@ export function VercelDetail({ integration, onBack }: Props) {
           targets,
         },
       });
-      setHint(`Variabile ${envKey.trim()} aggiornata in ${selectedProject.name}.`);
+      setHint(t("vercel.envUpdated", { key: envKey.trim(), project: selectedProject.name }));
       setEnvValue("");
       await refreshEnvs(selectedProject);
     } catch (err) {
@@ -187,8 +189,8 @@ export function VercelDetail({ integration, onBack }: Props) {
       <ProviderHeader
         providerLabel="VERCEL"
         title={integration.label}
-        description="Collega un Access Token Vercel per aggiornare environment variables dei progetti."
-        backLabel="← Torna ai servizi"
+        description={t("vercel.description")}
+        backLabel={t("common.backToServices")}
         onBack={onBack}
       />
 
@@ -197,21 +199,21 @@ export function VercelDetail({ integration, onBack }: Props) {
       {!linked ? (
         <form onSubmit={(e) => void handleLink(e)} className="max-w-xl space-y-4 rounded-2xl border border-surface-3/80 bg-surface-1/80 p-6">
           <div>
-            <h2 className="text-sm font-semibold text-ink">Collega Vercel</h2>
+            <h2 className="text-sm font-semibold text-ink">{t("vercel.connectTitle")}</h2>
             <p className="mt-1 text-xs text-ink-muted">
-              Crea un token da Vercel Account Settings. Se lavori su un team, inserisci anche il Team ID.
+              {t("vercel.connectLead")}
             </p>
           </div>
           <CredentialGuide
             steps={[
-              "Apri Vercel Account Settings e crea un Access Token dedicato a Rotate.",
-              "Seleziona lo scope corretto per i progetti personali o del team che vuoi aggiornare.",
-              "Se il progetto appartiene a un team, copia anche il Team ID da Team Settings → General.",
-              "Incolla il token qui: Rotate lo usa per elencare i progetti e aggiornare le environment variables.",
+              t("vercel.guide.step1"),
+              t("vercel.guide.step2"),
+              t("vercel.guide.step3"),
+              t("vercel.guide.step4"),
             ]}
             links={[
-              { href: "https://vercel.com/account/settings/tokens", label: "Crea token Vercel" },
-              { href: "https://vercel.com/docs/rest-api", label: "Documentazione API" },
+              { href: "https://vercel.com/account/settings/tokens", label: t("vercel.links.token") },
+              { href: "https://vercel.com/docs/rest-api", label: t("vercel.links.apiDocs") },
               {
                 href: "https://vercel.com/docs/projects/environment-variables",
                 label: "Environment variables",
@@ -229,7 +231,7 @@ export function VercelDetail({ integration, onBack }: Props) {
             />
           </label>
           <label className="block space-y-1.5 text-xs font-semibold text-ink-muted">
-            <span>Team ID opzionale</span>
+            <span>{t("vercel.optionalTeamId")}</span>
             <input
               value={teamId}
               onChange={(e) => setTeamId(e.target.value)}
@@ -239,31 +241,31 @@ export function VercelDetail({ integration, onBack }: Props) {
             />
           </label>
           <button type="submit" disabled={busy} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-surface-0 disabled:opacity-50">
-            {busy ? "Verifica..." : "Collega account"}
+            {busy ? t("common.verifying") : t("vercel.connectAccount")}
           </button>
         </form>
       ) : !initialLoadComplete || resourcesLoading ? (
         <ProviderLoadingPanel
-          title="Caricamento Vercel"
-          description="Sto scaricando progetti e variabili disponibili."
+          title={t("vercel.loadingTitle")}
+          description={t("vercel.loadingDescription")}
         />
       ) : (
         <div className="space-y-6">
           <LinkedAccountBar
             details={
               <>
-                <p className="text-xs text-ink-muted">Account collegato</p>
-                <p className="text-sm text-ink">{status?.userEmail ?? "Token verificato"}</p>
+                <p className="text-xs text-ink-muted">{t("common.linkedAccount")}</p>
+                <p className="text-sm text-ink">{status?.userEmail ?? t("vercel.verifiedToken")}</p>
                 {status?.teamId ? <p className="font-mono text-xs text-ink-muted">{status.teamId}</p> : null}
               </>
             }
             actions={
               <>
                 <button type="button" disabled={busy} onClick={() => void refreshProjects()} className="rounded-lg border border-surface-3 px-3 py-1.5 text-sm text-ink hover:border-accent/40">
-                  Aggiorna progetti
+                  {t("propagation.refreshProjects")}
                 </button>
                 <button type="button" disabled={busy} onClick={() => void handleUnlink()} className="rounded-lg border border-rose-500/40 px-3 py-1.5 text-sm text-rose-200 hover:bg-rose-500/10">
-                  Rimuovi collegamento
+                  {t("common.unlink")}
                 </button>
               </>
             }
@@ -273,14 +275,14 @@ export function VercelDetail({ integration, onBack }: Props) {
             <div className="grid gap-4 lg:grid-cols-[minmax(260px,360px)_1fr]">
               <div className="space-y-3">
                 <label className="block space-y-1.5 text-xs font-semibold text-ink-muted">
-                  <span>Progetto</span>
+                  <span>{t("propagation.project")}</span>
                   <select
                     value={selectedProject?.id ?? ""}
                     onChange={(e) => setSelectedProject(projects.find((project) => project.id === e.target.value) ?? null)}
                     className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
                   >
                     {projects.length === 0 ? (
-                      <option value="">Nessun progetto rilevato</option>
+                      <option value="">{t("vercel.noProjects")}</option>
                     ) : (
                       projects.map((project) => (
                         <option key={project.id} value={project.id}>{project.name}</option>
@@ -289,7 +291,7 @@ export function VercelDetail({ integration, onBack }: Props) {
                   </select>
                 </label>
                 <label className="block space-y-1.5 text-xs font-semibold text-ink-muted">
-                  <span>Variabile</span>
+                  <span>{t("propagation.variable")}</span>
                   <input
                     value={envKey}
                     onChange={(e) => setEnvKey(e.target.value)}
@@ -302,7 +304,7 @@ export function VercelDetail({ integration, onBack }: Props) {
                   </datalist>
                 </label>
                 <label className="block space-y-1.5 text-xs font-semibold text-ink-muted">
-                  <span>Nuovo valore</span>
+                  <span>{t("vercel.newValue")}</span>
                   <input
                     type="password"
                     value={envValue}
@@ -314,7 +316,7 @@ export function VercelDetail({ integration, onBack }: Props) {
                 <DeployTargetsPicker selected={targets} onToggle={toggleTarget} />
                 {hint ? <p className="text-xs text-accent">{hint}</p> : null}
                 <button type="button" disabled={busy || !selectedProject || !envKey.trim() || !envValue || targets.length === 0} onClick={() => void upsertEnv()} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-surface-0 disabled:opacity-50">
-                  {busy ? "Aggiornamento..." : "Aggiorna variabile"}
+                  {busy ? t("common.updating") : t("vercel.updateVariable")}
                 </button>
               </div>
               <div className="overflow-hidden rounded-xl border border-surface-3/80">
@@ -323,12 +325,12 @@ export function VercelDetail({ integration, onBack }: Props) {
                     <tr>
                       <th className="px-4 py-3 font-semibold">Key</th>
                       <th className="px-4 py-3 font-semibold">Target</th>
-                      <th className="px-4 py-3 font-semibold">Tipo</th>
+                      <th className="px-4 py-3 font-semibold">{t("vercel.colType")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-surface-3/60 bg-surface-1/40">
                     {envs.length === 0 ? (
-                      <tr><td colSpan={3} className="px-4 py-5 text-center text-ink-muted">Nessuna env var rilevata.</td></tr>
+                      <tr><td colSpan={3} className="px-4 py-5 text-center text-ink-muted">{t("vercel.noEnvVars")}</td></tr>
                     ) : (
                       envs.map((env) => (
                         <tr key={env.id || env.key} className="text-ink">

@@ -1,3 +1,5 @@
+import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { DeployTarget } from "../../secretDestinations";
 import type { VercelProjectRow } from "../../types";
 import { DeployTargetsPicker } from "./DeployTargetsPicker";
@@ -35,6 +37,19 @@ export function VercelEnvWriter({
   onToggleTarget,
   onWrite,
 }: Props) {
+  const { t } = useTranslation();
+  const [forceCustomKey, setForceCustomKey] = useState(false);
+  const selectedProject = projects.find((project) => project.id === selectedProjectId);
+  const envKeys = useMemo(
+    () => Array.from(new Set(selectedProject?.envKeys ?? [])).sort((a, b) => a.localeCompare(b)),
+    [selectedProject],
+  );
+  const selectedEnvKeyOption = !forceCustomKey && envKeys.includes(envKey) ? envKey : "__new__";
+
+  useEffect(() => {
+    setForceCustomKey(false);
+  }, [selectedProjectId]);
+
   return (
     <div className="mt-3 rounded-xl border border-surface-3/80 bg-surface-0/50 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -48,12 +63,12 @@ export function VercelEnvWriter({
           onClick={onRefreshProjects}
           className="rounded-lg border border-surface-3 px-2.5 py-1 text-xs font-medium text-ink-muted hover:border-accent/40 disabled:opacity-50"
         >
-          Aggiorna progetti
+          {t("propagation.refreshProjects")}
         </button>
       </div>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="space-y-1.5 text-xs font-semibold text-ink-muted">
-          <span>Progetto</span>
+          <span>{t("propagation.project")}</span>
           <select
             value={selectedProjectId}
             onChange={(e) => onSelectProject(e.target.value)}
@@ -71,13 +86,45 @@ export function VercelEnvWriter({
           </select>
         </label>
         <label className="space-y-1.5 text-xs font-semibold text-ink-muted">
-          <span>Env key</span>
-          <input
-            value={envKey}
-            onChange={(e) => onChangeEnvKey(e.target.value)}
-            className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 font-mono text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
-            autoComplete="off"
-          />
+          <span>{t("propagation.variable")}</span>
+          <select
+            value={selectedEnvKeyOption}
+            onChange={(e) => {
+              if (e.target.value === "__new__") {
+                setForceCustomKey(true);
+                onChangeEnvKey("");
+                return;
+              }
+              setForceCustomKey(false);
+              onChangeEnvKey(e.target.value);
+            }}
+            className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
+          >
+            {envKeys.length === 0 ? (
+              <option value="__new__">{t("propagation.createVariable")}</option>
+            ) : (
+              <>
+                {envKeys.map((key) => (
+                  <option key={key} value={key}>
+                    {key}
+                  </option>
+                ))}
+                <option value="__new__">{t("propagation.createVariableEllipsis")}</option>
+              </>
+            )}
+          </select>
+          {selectedEnvKeyOption === "__new__" ? (
+            <input
+              value={envKey}
+              onChange={(e) => {
+                setForceCustomKey(true);
+                onChangeEnvKey(e.target.value);
+              }}
+              className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 font-mono text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
+              placeholder="NOME_VARIABILE"
+              autoComplete="off"
+            />
+          ) : null}
         </label>
       </div>
       <div className="mt-3">
@@ -91,7 +138,7 @@ export function VercelEnvWriter({
           onClick={onWrite}
           className="rounded-lg border border-accent/50 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10 disabled:opacity-50"
         >
-          {busy ? "Aggiornamento..." : "Scrivi in Vercel"}
+          {busy ? t("common.updating") : t("propagation.writeVercel")}
         </button>
       </div>
     </div>

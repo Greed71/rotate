@@ -25,6 +25,315 @@
     "it": "Italiano",
     "en": "English"
   },
+  "common": {
+    "backToServices": "← Torna ai servizi",
+    "close": "Chiudi",
+    "linkedAccount": "Account collegato",
+    "unlink": "Rimuovi collegamento",
+    "updating": "Aggiornamento...",
+    "verifying": "Verifica..."
+  },
+  "propagation": {
+    "title": "Propaga secret",
+    "description": "Scegli le destinazioni da allineare con il nuovo valore.",
+    "batchTitle": "Propaga su più destinazioni",
+    "batchLead": "Puoi aggiornare Vercel, un file env locale e GitHub Actions nello stesso passaggio.",
+    "applySelected": "Applica selezionate",
+    "applying": "Applicazione...",
+    "localEnv": "Env locale",
+    "vercelTitle": "Aggiorna Vercel env",
+    "vercelDescription": "Scrive {{value}} negli env del progetto.",
+    "noVercelProjects": "Nessun progetto Vercel",
+    "connectVercel": "Collega Vercel da Esplora per scrivere questo valore negli env dei progetti.",
+    "localEnvTitle": "Aggiorna env locale",
+    "localEnvLead": "Indica un file .env: Rotate legge solo i nomi delle variabili e scrive il nuovo valore.",
+    "readKeys": "Leggi chiavi",
+    "envFile": "File env",
+    "variable": "Variabile",
+    "writeLocalEnv": "Scrivi in env locale",
+    "githubTitle": "Aggiorna GitHub Actions Secret",
+    "githubLead": "Scrive il valore nei Secrets del repository GitHub selezionato.",
+    "githubOwner": "Owner / organization",
+    "githubRepo": "Repository",
+    "githubSecretName": "Secret name",
+    "writeGithub": "Scrivi in GitHub",
+    "connectGithub": "Collega GitHub da Esplora per scrivere questo valore nei repository.",
+    "refreshProjects": "Aggiorna progetti",
+    "project": "Progetto",
+    "createVariable": "Crea nuova variabile",
+    "createVariableEllipsis": "Crea nuova variabile...",
+    "writeVercel": "Scrivi in Vercel",
+    "localEnvKeysFound": "{{count}} chiavi rilevate nel file env.",
+    "localEnvWillCreate": "Il file non esiste ancora: Rotate lo creerà alla scrittura.",
+    "localEnvCreated": "Variabile {{key}} creata nel file env locale.",
+    "localEnvUpdated": "Variabile {{key}} aggiornata nel file env locale.",
+    "githubUpdated": "Secret {{name}} aggiornato in {{owner}}/{{repo}}.",
+    "updated": "aggiornato",
+    "notUpdated": "non aggiornato"
+  },
+  "github": {
+    "description": "Collega un token GitHub per scrivere Actions Secrets nei repository dopo una rotazione.",
+    "connectTitle": "Collega GitHub",
+    "connectLead": "Usa un token dedicato con permessi sui repository dove vuoi aggiornare Actions Secrets.",
+    "guide": {
+      "step1": "Crea un fine-grained personal access token da GitHub Developer settings.",
+      "step2": "Seleziona i repository interessati.",
+      "step3": "Abilita almeno Repository permissions: Secrets read/write e Metadata read.",
+      "step4": "Incolla il token qui: Rotate lo custodisce nel portachiavi locale."
+    },
+    "tokenLabel": "GitHub token",
+    "saveVerify": "Salva e verifica",
+    "linkedLead": "GitHub verrà usato come destinazione per Actions Secrets nelle rotazioni."
+  },
+  "manualProviders": {
+    "linkedReference": "Riferimento collegato",
+    "saveNewSecret": "Salva un nuovo secret",
+    "connectTitle": "Collega {{title}}",
+    "secretShownAfterSave": "Il secret viene mostrato qui solo dopo il salvataggio, così puoi propagarlo subito.",
+    "secretOptional": "Puoi lasciarlo vuoto al primo collegamento e inserirlo quando generi la nuova chiave.",
+    "saving": "Salvataggio...",
+    "saveSecret": "Salva secret",
+    "connect": "Collega",
+    "resultLead": "Conserva o propaga subito questo valore. Il provider potrebbe non mostrarlo di nuovo.",
+    "copySecret": "Copia secret",
+    "copied": "Secret copiato negli appunti temporanei.",
+    "secretSaved": "Secret salvato. Ora aggiorna le destinazioni collegate.",
+    "referenceSaved": "Riferimento salvato. Aggiungi il secret quando lo generi dal provider.",
+    "stripe": {
+      "title": "Account Stripe",
+      "description": "Gestisci la sostituzione assistita delle chiavi Stripe e propagale negli ambienti collegati.",
+      "guideTitle": "Rotazione Stripe",
+      "steps": [
+        "Apri Stripe Dashboard -> Developers -> API keys.",
+        "Crea o ruota una Secret key o Restricted key dal Dashboard. Stripe mostra il valore una sola volta.",
+        "Incolla qui il nuovo valore e propagalo prima di eliminare o disattivare la chiave precedente."
+      ],
+      "publicIdLabel": "Publishable key o nome account",
+      "publicIdHint": "Serve come riferimento locale. La secret key resta nel vault.",
+      "secretLabel": "Nuova secret key generata da Stripe",
+      "resultTitle": "Secret Stripe pronta",
+      "valueLabel": "la nuova secret key Stripe"
+    },
+    "paypal": {
+      "title": "App PayPal",
+      "description": "Gestisci client secret PayPal generati nel Developer Dashboard e propagali negli ambienti collegati.",
+      "guideTitle": "Rotazione PayPal",
+      "steps": [
+        "Apri PayPal Developer Dashboard -> Apps & Credentials.",
+        "Seleziona l'app REST e genera o copia il nuovo client secret per Sandbox o Live.",
+        "Incolla qui il nuovo valore e propagalo prima di dismettere il secret precedente."
+      ],
+      "publicIdLabel": "PayPal Client ID",
+      "publicIdHint": "Il Client ID non è segreto; il client secret resta nel vault.",
+      "secretLabel": "Nuovo client secret generato da PayPal",
+      "resultTitle": "Client secret PayPal pronto",
+      "valueLabel": "il nuovo client secret PayPal"
+    },
+    "facebook": {
+      "title": "App Facebook",
+      "description": "Gestisci App Secret Facebook generati nel Meta Developers Dashboard e propagali negli ambienti collegati.",
+      "guideTitle": "Rotazione Facebook",
+      "steps": [
+        "Apri Meta for Developers -> My Apps e seleziona l'app.",
+        "Vai in App settings -> Basic e usa Show o Reset accanto ad App Secret.",
+        "Incolla qui il nuovo App Secret e propagalo prima di aggiornare i servizi che usano il vecchio."
+      ],
+      "publicIdLabel": "Facebook App ID",
+      "publicIdHint": "L'App ID non è segreto; l'App Secret resta nel vault.",
+      "secretLabel": "Nuovo App Secret generato da Facebook",
+      "resultTitle": "App Secret Facebook pronto",
+      "valueLabel": "il nuovo App Secret Facebook"
+    },
+    "discord": {
+      "title": "App Discord",
+      "description": "Gestisci bot token e client secret Discord generati nel Developer Portal e propagali negli ambienti collegati.",
+      "guideTitle": "Rotazione Discord",
+      "steps": [
+        "Apri Discord Developer Portal -> Applications e seleziona l'app.",
+        "Per un bot token vai in Bot -> Reset Token. Per OAuth vai in OAuth2 e rigenera/copia il client secret.",
+        "Incolla qui il nuovo valore e propagalo prima di dismettere quello precedente."
+      ],
+      "publicIdLabel": "Discord Application ID",
+      "publicIdHint": "L'Application ID non è segreto; bot token e client secret restano nel vault.",
+      "secretLabel": "Nuovo bot token o client secret Discord",
+      "resultTitle": "Secret Discord pronto",
+      "valueLabel": "il nuovo secret Discord"
+    },
+    "twitch": {
+      "title": "App Twitch",
+      "description": "Gestisci client secret Twitch generati nella Developer Console e propagali negli ambienti collegati.",
+      "guideTitle": "Rotazione Twitch",
+      "steps": [
+        "Apri Twitch Developer Console -> Applications e seleziona la tua app.",
+        "Crea o rigenera il client secret dall'area Manage dell'app.",
+        "Incolla qui il nuovo client secret e propagalo prima di aggiornare i servizi che usano il vecchio."
+      ],
+      "publicIdLabel": "Twitch Client ID",
+      "publicIdHint": "Il Client ID non è segreto; il client secret resta nel vault.",
+      "secretLabel": "Nuovo client secret generato da Twitch",
+      "resultTitle": "Client secret Twitch pronto",
+      "valueLabel": "il nuovo client secret Twitch"
+    }
+  },
+  "googleOauth": {
+    "description": "Custodisci il client secret generato da Google e propagalo negli env dei deploy.",
+    "guideTitle": "Rotazione Google OAuth",
+    "guide": {
+      "step1": "Apri Google Auth Platform -> Clients e seleziona il client OAuth.",
+      "step2": "Usa Add Secret per generare un nuovo client secret. Google lo mostra una sola volta.",
+      "step3": "Incolla qui il nuovo secret e aggiorna Vercel o gli altri ambienti prima di disabilitare il vecchio secret."
+    },
+    "linkedClient": "Client collegato",
+    "saveGeneratedSecret": "Salva il nuovo secret generato da Google",
+    "connectClient": "Collega client OAuth",
+    "connectLead": "Per collegare il client basta il Google Client ID. Il secret si aggiunge dopo, quando lo generi con Add Secret nella Console Google.",
+    "openConsole": "Apri Google Auth Platform",
+    "generatedSecret": "Secret generato da Google",
+    "optionalSecret": "Google Client Secret opzionale",
+    "secretHint": "Al primo collegamento puoi lasciarlo vuoto. Quando ruoti, incolla qui il secret appena creato con Add Secret nella Console Google.",
+    "saveChanges": "Salva modifiche",
+    "linkClient": "Collega client",
+    "resultTitle": "Client secret Google pronto",
+    "resultLead": "Questo è il valore generato da Google e salvato in Rotate. Aggiorna subito gli env collegati.",
+    "valueLabel": "il client secret Google",
+    "secretSaved": "Secret Google salvato. Ora aggiorna gli env collegati.",
+    "clientLinked": "Client OAuth collegato. Aggiungi il secret quando lo generi da Google."
+  },
+  "resend": {
+    "description": "Gestisci API key Resend e scrivi il nuovo valore negli env dei tuoi deploy.",
+    "guide": {
+      "step1": "Apri Resend Dashboard -> API Keys.",
+      "step2": "Crea o copia una API key con permesso sufficiente a leggere, creare ed eliminare API key.",
+      "step3": "Incollala qui: Rotate la userà solo come credenziale di gestione locale."
+    },
+    "managementKey": "API key di gestione Resend",
+    "connectAccount": "Collega account",
+    "verified": "API key di gestione verificata",
+    "refreshList": "Aggiorna elenco",
+    "keysTitle": "API key Resend",
+    "keysLead": "Resend mostra il nuovo token una sola volta. Propagalo prima di eliminare la chiave precedente.",
+    "permission": "Permesso nuova key",
+    "revokeOld": "Revoca vecchia key",
+    "afterEnvUpdate": "Solo dopo aver aggiornato gli env",
+    "loadingTitle": "Caricamento Resend",
+    "loadingDescription": "Sto leggendo le API key disponibili.",
+    "colName": "Nome",
+    "colCreated": "Creata",
+    "colLastUsed": "Ultimo uso",
+    "colActions": "Azioni",
+    "noKeys": "Nessuna API key rilevata.",
+    "rotate": "Ruota",
+    "createKey": "Crea nuova API key",
+    "resultTitle": "Nuova API key Resend",
+    "resultLead": "Copia o scrivi subito questo valore: Resend non lo mostrerà di nuovo.",
+    "propagateKey": "Propaga key",
+    "copyKey": "Copia key",
+    "copied": "Copiata negli appunti temporanei.",
+    "valueLabel": "la nuova API key Resend"
+  },
+  "cloudflareTurnstile": {
+    "resultLead": "Aggiorna subito il backend che usa questo widget. Cloudflare mostra questo secret solo ora.",
+    "propagationLead": "Seleziona Vercel, Supabase, env locale e GitHub per allineare le fonti nello stesso passaggio.",
+    "localEnvLead": "Indica un file .env: Rotate legge solo i nomi delle variabili e scrive il nuovo secret.",
+    "githubLead": "Scrive il nuovo valore nei Secrets del repository GitHub selezionato.",
+    "workerTitle": "Aggiorna Worker secret",
+    "noWorkers": "Nessun Worker rilevato",
+    "workerLead": "Il valore viene scritto su Cloudflare Workers e non viene salvato nel database locale.",
+    "writeWorker": "Scrivi nel Worker",
+    "pagesTitle": "Aggiorna Pages secret",
+    "noPagesProjects": "Nessun progetto Pages",
+    "pagesLead": "Pages usa questo valore nei nuovi deploy/build successivi.",
+    "writePages": "Scrivi in Pages",
+    "secretsStoreTitle": "Aggiorna Secrets Store",
+    "noStores": "Nessuno store",
+    "secretsStoreLead": "Se non selezioni un secret esistente, Rotate ne crea uno nuovo nello store scelto.",
+    "writeStore": "Scrivi nello Store",
+    "supabaseTitle": "Aggiorna Supabase secret",
+    "supabaseSecretName": "Secret nuovo o non in elenco",
+    "writeSupabase": "Scrivi in Supabase"
+  },
+  "vercel": {
+    "description": "Collega un Access Token Vercel per aggiornare environment variables dei progetti.",
+    "connectTitle": "Collega Vercel",
+    "connectLead": "Crea un token da Vercel Account Settings. Se lavori su un team, inserisci anche il Team ID.",
+    "guide": {
+      "step1": "Apri Vercel Account Settings e crea un Access Token dedicato a Rotate.",
+      "step2": "Seleziona lo scope corretto per i progetti personali o del team che vuoi aggiornare.",
+      "step3": "Se il progetto appartiene a un team, copia anche il Team ID da Team Settings -> General.",
+      "step4": "Incolla il token qui: Rotate lo usa per elencare i progetti e aggiornare le environment variables."
+    },
+    "links": {
+      "token": "Crea token Vercel",
+      "apiDocs": "Documentazione API"
+    },
+    "optionalTeamId": "Team ID opzionale",
+    "connectAccount": "Collega account",
+    "loadingTitle": "Caricamento Vercel",
+    "loadingDescription": "Sto scaricando progetti e variabili disponibili.",
+    "verifiedToken": "Token verificato",
+    "noProjects": "Nessun progetto rilevato",
+    "newValue": "Nuovo valore",
+    "updateVariable": "Aggiorna variabile",
+    "colType": "Tipo",
+    "noEnvVars": "Nessuna env var rilevata.",
+    "envUpdated": "Variabile {{key}} aggiornata in {{project}}."
+  },
+  "supabase": {
+    "description": "Collega un Personal Access Token Supabase per ruotare API key e aggiornare secret Edge Functions.",
+    "connectTitle": "Collega Supabase",
+    "connectLead": "Crea un Personal Access Token con accesso ai progetti e ai secret Edge Functions.",
+    "guide": {
+      "step1": "Apri Supabase Account -> Access Tokens e crea un Personal Access Token dedicato a Rotate.",
+      "step2": "Il token deve poter leggere i progetti, leggere/scrivere API key e leggere/scrivere i secret delle Edge Functions.",
+      "step3": "Le API key vengono generate da Supabase; Rotate mostra il nuovo valore una sola volta.",
+      "step4": "I secret Edge Functions non generano valori: ricevono valori prodotti da un'altra rotazione o incollati esplicitamente."
+    },
+    "links": {
+      "token": "Crea token Supabase"
+    },
+    "connectAccount": "Collega account",
+    "loadingTitle": "Caricamento Supabase",
+    "loadingDescription": "Sto scaricando progetti, API key e secret disponibili.",
+    "verifiedToken": "Personal Access Token verificato",
+    "noProjects": "Nessun progetto rilevato",
+    "customSecretsUpdated": "{{count}} secret aggiornati in {{project}}.",
+    "databaseUrlCopied": "DATABASE_URL copiata negli appunti temporanei.",
+    "passwordCopied": "Password copiata negli appunti temporanei.",
+    "customSecretsTitle": "Secret custom del progetto",
+    "customSecretsLead": "Qui trovi solo i secret applicativi già presenti in Supabase e non gestiti dai flussi dedicati sopra. Puoi aggiornarli insieme oppure crearne uno nuovo incollando un valore generato altrove, per esempio un secret Turnstile.",
+    "availableSecrets": "Secret disponibili",
+    "colUpdate": "Aggiorna",
+    "colUpdated": "Aggiornato",
+    "noCustomSecrets": "Nessun secret custom presente.",
+    "noCustomSecretsLead": "Puoi crearne uno dal pannello a destra inserendo nome e valore.",
+    "updateSecret": "Aggiorna secret",
+    "updateSecretLead": "Salva lo stesso valore sui secret selezionati, oppure crea anche un nuovo secret manuale.",
+    "addManualSecret": "Aggiungi secret manuale",
+    "manualSecretHint": "Opzionale: usalo solo se il secret non compare ancora nella tabella.",
+    "newValueToSave": "Nuovo valore da salvare",
+    "externalValueHint": "Incolla qui il valore già generato da un altro servizio, per esempio un nuovo secret Turnstile.",
+    "saveSecrets": "Salva nei secret",
+    "apiKeysTitle": "API key Supabase",
+    "apiKeysLead": "Qui la nuova chiave viene generata da Supabase. Rotate la mostra una sola volta.",
+    "noApiKeys": "Nessuna API key rilevata.",
+    "rotating": "Rotazione...",
+    "databasePasswordTitle": "Password database Postgres",
+    "databasePasswordLead": "Ruota la password dell'utente Postgres principale e genera una nuova DATABASE_URL diretta. Supabase aggiorna i servizi gestiti, ma i tuoi servizi esterni devono essere aggiornati subito.",
+    "confirmProjectRef": "Conferma project ref",
+    "rotateDatabasePassword": "Ruota password DB",
+    "selectProjectForDb": "Seleziona un progetto prima di ruotare la password database.",
+    "apiKeyResultTitle": "Nuova API key Supabase",
+    "apiKeyResultLead": "Supabase mostra questo valore solo ora. Aggiorna i servizi che usavano la key precedente.",
+    "databaseUrlResultTitle": "Nuova DATABASE_URL",
+    "databaseUrlResultLead": "Aggiorna subito pool, backend e deploy che usano la vecchia password. Rotate non salva questi valori.",
+    "connectionType": "Tipo connessione",
+    "showPasswordOnly": "Mostra solo password",
+    "propagateDatabaseUrl": "Propaga DATABASE_URL",
+    "copyPassword": "Copia password",
+    "copyDatabaseUrl": "Copia DATABASE_URL",
+    "apiKeyValueLabel": "la nuova API key Supabase",
+    "databaseUrlValueLabel": "la nuova DATABASE_URL"
+  },
   "settings": {
     "kicker": "Impostazioni",
     "title": "Preferenze del vault",
@@ -66,6 +375,7 @@
     "envExamples": "Variabili tipiche",
     "added": "Nel vault",
     "add": "Aggiungi",
+    "open": "Apri",
     "inPool": "Già aggiunto"
   },
   "automation": {
@@ -98,6 +408,36 @@
       "title": "OAuth (Google)",
       "defaultLabel": "Client OAuth Google",
       "blurb": "Gestione assistita di Client ID e client secret creati nella Google Cloud Console."
+    },
+    "github": {
+      "title": "GitHub",
+      "defaultLabel": "Account GitHub",
+      "blurb": "Scrive Actions Secrets nei repository dopo una rotazione."
+    },
+    "stripe": {
+      "title": "Stripe",
+      "defaultLabel": "Account Stripe",
+      "blurb": "Gestione assistita delle secret key Stripe generate dal Dashboard e propagazione negli env."
+    },
+    "paypal": {
+      "title": "PayPal",
+      "defaultLabel": "App PayPal",
+      "blurb": "Gestione assistita dei client secret PayPal generati dal Developer Dashboard."
+    },
+    "facebook": {
+      "title": "Facebook",
+      "defaultLabel": "App Facebook",
+      "blurb": "Gestione assistita degli App Secret Facebook generati da Meta for Developers."
+    },
+    "discord": {
+      "title": "Discord",
+      "defaultLabel": "App Discord",
+      "blurb": "Gestione assistita di bot token e client secret Discord generati dal Developer Portal."
+    },
+    "twitch": {
+      "title": "Twitch",
+      "defaultLabel": "App Twitch",
+      "blurb": "Gestione assistita dei client secret Twitch generati dalla Developer Console."
     }
   },
   "services": {
@@ -163,6 +503,9 @@
     "linked": "Account collegato",
     "keyringHint": "Rotate salva la credenziale su questo dispositivo e preferisce il portachiavi di sistema quando disponibile.",
     "showToken": "Mostra token",
+    "storageDiagnostics": "Diagnostica storage",
+    "closeDiagnostics": "Chiudi diagnostica",
+    "unlinkTitle": "Rimuovi collegamento Cloudflare",
     "refreshList": "Aggiorna elenco",
     "unlink": "Rimuovi collegamento",
     "colName": "Nome",

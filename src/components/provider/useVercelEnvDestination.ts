@@ -51,10 +51,10 @@ export function useVercelEnvDestination({
 
   const writeValue = useCallback(
     async (value: string) => {
-      if (!vercelIntegration) return;
+      if (!vercelIntegration) return false;
       const project = projects.find((item) => item.id === selectedProjectId);
       const key = envKey.trim();
-      if (!project || !key || !value) return;
+      if (!project || !key || !value) return false;
       setBusy(true);
       setHint(null);
       try {
@@ -69,8 +69,10 @@ export function useVercelEnvDestination({
           },
         });
         setHint(`Env ${key} aggiornata in Vercel (${project.name}).`);
+        return true;
       } catch (e) {
         onError(errText(e));
+        return false;
       } finally {
         setBusy(false);
       }

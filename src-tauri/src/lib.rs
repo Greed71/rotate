@@ -2,6 +2,8 @@
 
 mod cf_api;
 mod db;
+mod github_api;
+mod local_env;
 mod resend_api;
 mod secrets;
 mod security;
@@ -161,9 +163,47 @@ fn integrations_remove(
         "oauth_google" => {
             secrets::oauth_google_secret_delete(&app, &integration_id)?;
         }
+        "github" => {
+            secrets::github_token_delete(&app, &integration_id)?;
+        }
+        "stripe" => {
+            secrets::stripe_secret_delete(&app, &integration_id)?;
+        }
+        "paypal" => {
+            secrets::paypal_secret_delete(&app, &integration_id)?;
+        }
+        "facebook" => {
+            secrets::facebook_secret_delete(&app, &integration_id)?;
+        }
+        "discord" => {
+            secrets::discord_secret_delete(&app, &integration_id)?;
+        }
+        "twitch" => {
+            secrets::twitch_secret_delete(&app, &integration_id)?;
+        }
         _ => return Err("Provider non supportato.".into()),
     }
     db::delete_integration(&app, &integration_id)
+}
+
+#[tauri::command]
+fn local_env_read_keys(
+    app: tauri::AppHandle,
+    session: tauri::State<SessionState>,
+    path: String,
+) -> Result<local_env::LocalEnvInspectDto, String> {
+    security::require_vault_access(&app, &session)?;
+    local_env::inspect(&path)
+}
+
+#[tauri::command]
+fn local_env_upsert_secret(
+    app: tauri::AppHandle,
+    session: tauri::State<SessionState>,
+    payload: local_env::LocalEnvUpsertCommand,
+) -> Result<local_env::LocalEnvUpsertResult, String> {
+    security::require_vault_access(&app, &session)?;
+    local_env::upsert(payload)
 }
 
 #[derive(Serialize)]
@@ -1096,6 +1136,8 @@ pub fn run() {
             integrations_list,
             integrations_add,
             integrations_remove,
+            local_env_read_keys,
+            local_env_upsert_secret,
             simple_provider_commands::resend_link,
             simple_provider_commands::resend_status,
             simple_provider_commands::resend_list_api_keys,
@@ -1104,6 +1146,25 @@ pub fn run() {
             simple_provider_commands::oauth_google_link,
             simple_provider_commands::oauth_google_status,
             simple_provider_commands::oauth_google_unlink,
+            simple_provider_commands::github_link,
+            simple_provider_commands::github_status,
+            simple_provider_commands::github_upsert_actions_secret,
+            simple_provider_commands::github_unlink,
+            simple_provider_commands::stripe_link,
+            simple_provider_commands::stripe_status,
+            simple_provider_commands::stripe_unlink,
+            simple_provider_commands::paypal_link,
+            simple_provider_commands::paypal_status,
+            simple_provider_commands::paypal_unlink,
+            simple_provider_commands::facebook_link,
+            simple_provider_commands::facebook_status,
+            simple_provider_commands::facebook_unlink,
+            simple_provider_commands::discord_link,
+            simple_provider_commands::discord_status,
+            simple_provider_commands::discord_unlink,
+            simple_provider_commands::twitch_link,
+            simple_provider_commands::twitch_status,
+            simple_provider_commands::twitch_unlink,
             supabase_link,
             supabase_status,
             supabase_list_projects,

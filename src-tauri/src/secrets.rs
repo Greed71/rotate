@@ -16,6 +16,12 @@ pub enum ProviderToken {
     Supabase,
     Resend,
     OauthGoogle,
+    Github,
+    Stripe,
+    Paypal,
+    Facebook,
+    Discord,
+    Twitch,
 }
 
 impl ProviderToken {
@@ -26,6 +32,12 @@ impl ProviderToken {
             Self::Supabase => "supabase",
             Self::Resend => "resend",
             Self::OauthGoogle => "oauth_google",
+            Self::Github => "github",
+            Self::Stripe => "stripe",
+            Self::Paypal => "paypal",
+            Self::Facebook => "facebook",
+            Self::Discord => "discord",
+            Self::Twitch => "twitch",
         }
     }
 
@@ -36,6 +48,12 @@ impl ProviderToken {
             Self::Supabase => "Supabase",
             Self::Resend => "Resend",
             Self::OauthGoogle => "Google OAuth",
+            Self::Github => "GitHub",
+            Self::Stripe => "Stripe",
+            Self::Paypal => "PayPal",
+            Self::Facebook => "Facebook",
+            Self::Discord => "Discord",
+            Self::Twitch => "Twitch",
         }
     }
 }
@@ -414,6 +432,101 @@ pub fn oauth_google_secret_save(
 
 pub fn oauth_google_secret_delete(app: &AppHandle, integration_id: &str) -> Result<(), String> {
     provider_token_delete(app, integration_id, ProviderToken::OauthGoogle)
+}
+
+pub fn github_token_save(app: &AppHandle, integration_id: &str, token: &str) -> Result<(), String> {
+    provider_token_save(app, integration_id, ProviderToken::Github, token)
+}
+
+pub fn github_token_get(app: &AppHandle, integration_id: &str) -> Result<Option<String>, String> {
+    provider_token_get(app, integration_id, ProviderToken::Github)
+}
+
+pub fn github_token_delete(app: &AppHandle, integration_id: &str) -> Result<(), String> {
+    provider_token_delete(app, integration_id, ProviderToken::Github)
+}
+
+pub fn stripe_secret_save(
+    app: &AppHandle,
+    integration_id: &str,
+    token: &str,
+) -> Result<(), String> {
+    provider_token_save(app, integration_id, ProviderToken::Stripe, token)
+}
+
+pub fn stripe_secret_get(app: &AppHandle, integration_id: &str) -> Result<Option<String>, String> {
+    provider_token_get(app, integration_id, ProviderToken::Stripe)
+}
+
+pub fn stripe_secret_delete(app: &AppHandle, integration_id: &str) -> Result<(), String> {
+    provider_token_delete(app, integration_id, ProviderToken::Stripe)
+}
+
+pub fn paypal_secret_save(
+    app: &AppHandle,
+    integration_id: &str,
+    token: &str,
+) -> Result<(), String> {
+    provider_token_save(app, integration_id, ProviderToken::Paypal, token)
+}
+
+pub fn paypal_secret_get(app: &AppHandle, integration_id: &str) -> Result<Option<String>, String> {
+    provider_token_get(app, integration_id, ProviderToken::Paypal)
+}
+
+pub fn paypal_secret_delete(app: &AppHandle, integration_id: &str) -> Result<(), String> {
+    provider_token_delete(app, integration_id, ProviderToken::Paypal)
+}
+
+pub fn facebook_secret_save(
+    app: &AppHandle,
+    integration_id: &str,
+    token: &str,
+) -> Result<(), String> {
+    provider_token_save(app, integration_id, ProviderToken::Facebook, token)
+}
+
+pub fn facebook_secret_get(
+    app: &AppHandle,
+    integration_id: &str,
+) -> Result<Option<String>, String> {
+    provider_token_get(app, integration_id, ProviderToken::Facebook)
+}
+
+pub fn facebook_secret_delete(app: &AppHandle, integration_id: &str) -> Result<(), String> {
+    provider_token_delete(app, integration_id, ProviderToken::Facebook)
+}
+
+pub fn discord_secret_save(
+    app: &AppHandle,
+    integration_id: &str,
+    token: &str,
+) -> Result<(), String> {
+    provider_token_save(app, integration_id, ProviderToken::Discord, token)
+}
+
+pub fn discord_secret_get(app: &AppHandle, integration_id: &str) -> Result<Option<String>, String> {
+    provider_token_get(app, integration_id, ProviderToken::Discord)
+}
+
+pub fn discord_secret_delete(app: &AppHandle, integration_id: &str) -> Result<(), String> {
+    provider_token_delete(app, integration_id, ProviderToken::Discord)
+}
+
+pub fn twitch_secret_save(
+    app: &AppHandle,
+    integration_id: &str,
+    token: &str,
+) -> Result<(), String> {
+    provider_token_save(app, integration_id, ProviderToken::Twitch, token)
+}
+
+pub fn twitch_secret_get(app: &AppHandle, integration_id: &str) -> Result<Option<String>, String> {
+    provider_token_get(app, integration_id, ProviderToken::Twitch)
+}
+
+pub fn twitch_secret_delete(app: &AppHandle, integration_id: &str) -> Result<(), String> {
+    provider_token_delete(app, integration_id, ProviderToken::Twitch)
 }
 
 #[derive(Serialize)]

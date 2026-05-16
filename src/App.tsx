@@ -3,7 +3,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CloudflareDetail } from "./components/CloudflareDetail";
 import { ExploreView } from "./components/ExploreView";
+import { GitHubDetail } from "./components/GitHubDetail";
 import { HomeView } from "./components/HomeView";
+import { ManualSecretProviderDetail } from "./components/ManualSecretProviderDetail";
 import { OauthGoogleDetail } from "./components/OauthGoogleDetail";
 import { ResendDetail } from "./components/ResendDetail";
 import { ServicePlaceholderDetail } from "./components/ServicePlaceholderDetail";
@@ -222,6 +224,19 @@ function MainShell(props: {
               />
             ) : openedService.provider === "oauth_google" ? (
               <OauthGoogleDetail
+                integration={openedService}
+                integrations={integrations}
+                onBack={closeServiceDetail}
+              />
+            ) : openedService.provider === "github" ? (
+              <GitHubDetail integration={openedService} onBack={closeServiceDetail} />
+            ) : openedService.provider === "stripe" ||
+              openedService.provider === "paypal" ||
+              openedService.provider === "facebook" ||
+              openedService.provider === "discord" ||
+              openedService.provider === "twitch" ? (
+              <ManualSecretProviderDetail
+                provider={openedService.provider}
                 integration={openedService}
                 integrations={integrations}
                 onBack={closeServiceDetail}

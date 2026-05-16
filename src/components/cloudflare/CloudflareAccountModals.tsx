@@ -100,13 +100,14 @@ export function ConfirmUnlinkModal({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <ConfirmModal
       tone="danger"
-      title="Rimuovi collegamento Cloudflare"
+      title={t("cloudflare.unlinkTitle")}
       body="Verranno rimossi da questo dispositivo Account ID, token di gestione e stato locale del collegamento. I token su Cloudflare non vengono eliminati."
       busy={busy}
-      confirmLabel="Rimuovi collegamento"
+      confirmLabel={t("common.unlink")}
       onCancel={onCancel}
       onConfirm={onConfirm}
     />
@@ -363,6 +364,7 @@ export function AccessRotateResultModal({
   onCopy: () => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
       <div className="w-full max-w-lg rounded-2xl border border-amber-500/30 bg-surface-1 p-6 shadow-2xl">
@@ -390,7 +392,7 @@ export function AccessRotateResultModal({
             onClick={onClose}
             className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-surface-0"
           >
-            Chiudi
+            {t("common.close")}
           </button>
         </div>
       </div>

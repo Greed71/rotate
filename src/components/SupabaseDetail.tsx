@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { copySensitiveWithAutoClear } from "../clipboardSecure";
 import type {
   Integration,
@@ -9,7 +10,6 @@ import type {
   SupabaseProjectRow,
   SupabaseSecretRow,
   SupabaseStatusDto,
-  VercelProjectRow,
 } from "../types";
 import { AlertMessage } from "./provider/AlertMessage";
 import { CredentialGuide } from "./provider/CredentialGuide";
@@ -17,9 +17,9 @@ import { DestructiveToggle } from "./provider/DestructiveToggle";
 import { LinkedAccountBar } from "./provider/LinkedAccountBar";
 import { ProviderHeader } from "./provider/ProviderHeader";
 import { ProviderLoadingPanel } from "./provider/ProviderLoadingPanel";
-import { VercelEnvWriter } from "./provider/VercelEnvWriter";
-import type { DeployTarget } from "../secretDestinations";
+import { SecretPropagationModal } from "./provider/SecretPropagationModal";
 import { errText } from "./provider/errors";
+import { useSecretPropagation } from "./provider/useSecretPropagation";
 
 type Props = {
   integration: Integration;
@@ -35,6 +35,10 @@ const MANAGED_SUPABASE_SECRET_NAMES = new Set([
   "SUPABASE_DB_URL",
   "SUPABASE_SERVICE_ROLE_KEY",
 ]);
+
+function defaultApiKeyEnvKey(keyType: string | null | undefined): string {
+  return keyType === "publishable" ? "SUPABASE_ANON_KEY" : "SUPABASE_SERVICE_ROLE_KEY";
+}
 
 function isManagedSupabaseSecret(name: string): boolean {
   return MANAGED_SUPABASE_SECRET_NAMES.has(name.trim().toUpperCase());
@@ -63,6 +67,7 @@ function buildDatabaseUrl(
 }
 
 export function SupabaseDetail({ integration, integrations = [], onBack }: Props) {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<SupabaseStatusDto | null>(null);
   const [accessToken, setAccessToken] = useState("");
   const [projects, setProjects] = useState<SupabaseProjectRow[]>([]);
@@ -82,14 +87,8 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
   const [databaseCopyHint, setDatabaseCopyHint] = useState<string | null>(null);
   const [databaseUrlMode, setDatabaseUrlMode] = useState<DatabaseUrlMode>("direct");
   const [poolerHost, setPoolerHost] = useState("aws-1-eu-central-1.pooler.supabase.com");
-  const [vercelProjects, setVercelProjects] = useState<VercelProjectRow[]>([]);
-  const [selectedVercelProjectId, setSelectedVercelProjectId] = useState("");
-  const [databaseVercelEnvKey, setDatabaseVercelEnvKey] = useState("DATABASE_URL");
-  const [apiKeyVercelEnvKey, setApiKeyVercelEnvKey] = useState("SUPABASE_SERVICE_ROLE_KEY");
-  const [vercelTargets, setVercelTargets] = useState(["production"]);
-  const [vercelBusy, setVercelBusy] = useState(false);
-  const [vercelHint, setVercelHint] = useState<string | null>(null);
-  const [apiKeyVercelHint, setApiKeyVercelHint] = useState<string | null>(null);
+  const [apiKeyPropagationOpen, setApiKeyPropagationOpen] = useState(false);
+  const [databasePropagationOpen, setDatabasePropagationOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [resourcesLoading, setResourcesLoading] = useState(false);
@@ -98,11 +97,27 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
 
   const integrationId = integration.id;
   const linked = status?.linked ?? false;
-  const vercelIntegration = integrations.find((item) => item.provider === "vercel");
   const editableSecrets = secrets.filter((secret) => !isManagedSupabaseSecret(secret.name));
   const selectedDatabaseUrl = databaseResult
     ? buildDatabaseUrl(databaseResult.projectRef, databaseResult.password, databaseUrlMode, poolerHost.trim())
     : "";
+  const handlePropagationError = useCallback((message: string) => setError(message), []);
+  const apiKeyPropagation = useSecretPropagation({
+    integrations,
+    defaultEnvKey: defaultApiKeyEnvKey(apiKeyResult?.keyType),
+    secretValue: apiKeyResult?.apiKey ?? "",
+    onError: handlePropagationError,
+  });
+  const databasePropagation = useSecretPropagation({
+    integrations,
+    defaultEnvKey: "DATABASE_URL",
+    secretValue: selectedDatabaseUrl,
+    onError: handlePropagationError,
+  });
+  const apiKeyPropagationVercelIntegrationId = apiKeyPropagation.vercelIntegration?.id;
+  const databasePropagationVercelIntegrationId = databasePropagation.vercelIntegration?.id;
+  const refreshApiKeyPropagationVercelProjects = apiKeyPropagation.vercel.refreshProjects;
+  const refreshDatabasePropagationVercelProjects = databasePropagation.vercel.refreshProjects;
 
   const refreshStatus = useCallback(async () => {
     try {
@@ -127,26 +142,6 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
       setError(errText(e));
     }
   }, [integrationId]);
-
-  const refreshVercelProjects = useCallback(async () => {
-    if (!vercelIntegration) {
-      setVercelProjects([]);
-      setSelectedVercelProjectId("");
-      return;
-    }
-    try {
-      const list = await invoke<VercelProjectRow[]>("vercel_list_projects", {
-        integrationId: vercelIntegration.id,
-      });
-      setVercelProjects(list);
-      setSelectedVercelProjectId((current) =>
-        current && list.some((project) => project.id === current) ? current : list[0]?.id || "",
-      );
-    } catch {
-      setVercelProjects([]);
-      setSelectedVercelProjectId("");
-    }
-  }, [vercelIntegration]);
 
   const refreshSecrets = useCallback(
     async (project: SupabaseProjectRow | null) => {
@@ -238,10 +233,16 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
   }, [selectedProject]);
 
   useEffect(() => {
-    if ((apiKeyResult || databaseResult) && vercelIntegration) {
-      void refreshVercelProjects();
+    if (apiKeyResult && apiKeyPropagationVercelIntegrationId) {
+      void refreshApiKeyPropagationVercelProjects();
     }
-  }, [apiKeyResult, databaseResult, vercelIntegration, refreshVercelProjects]);
+  }, [apiKeyResult, apiKeyPropagationVercelIntegrationId, refreshApiKeyPropagationVercelProjects]);
+
+  useEffect(() => {
+    if (databaseResult && databasePropagationVercelIntegrationId) {
+      void refreshDatabasePropagationVercelProjects();
+    }
+  }, [databaseResult, databasePropagationVercelIntegrationId, refreshDatabasePropagationVercelProjects]);
 
   async function handleLink(e: React.FormEvent) {
     e.preventDefault();
@@ -302,7 +303,7 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
           value: secretValue,
         },
       });
-      setHint(`${names.length} secret aggiornati in ${selectedProject.name}.`);
+      setHint(t("supabase.customSecretsUpdated", { count: names.length, project: selectedProject.name }));
       setSecretName("");
       setSecretValue("");
       await refreshSecrets(selectedProject);
@@ -329,6 +330,7 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
         },
       });
       setApiKeyResult(result);
+      setApiKeyPropagationOpen(false);
       await refreshApiKeys(selectedProject);
     } catch (err) {
       setError(errText(err));
@@ -341,7 +343,7 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
     if (!apiKeyResult) return;
     try {
       await copySensitiveWithAutoClear(apiKeyResult.apiKey);
-      setApiKeyCopyHint("Copiata negli appunti temporanei.");
+      setApiKeyCopyHint(t("resend.copied"));
     } catch (err) {
       setError(errText(err));
     }
@@ -362,6 +364,7 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
         },
       });
       setDatabaseResult(result);
+      setDatabasePropagationOpen(false);
       setDatabaseConfirmRef("");
     } catch (err) {
       setError(errText(err));
@@ -374,77 +377,17 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
     if (!databaseResult) return;
     try {
       await copySensitiveWithAutoClear(selectedDatabaseUrl);
-      setDatabaseCopyHint("DATABASE_URL copiata negli appunti temporanei.");
+      setDatabaseCopyHint(t("supabase.databaseUrlCopied"));
     } catch (err) {
       setError(errText(err));
     }
-  }
-
-  async function updateVercelDatabaseUrl() {
-    if (!databaseResult || !vercelIntegration) return;
-    const project = vercelProjects.find((item) => item.id === selectedVercelProjectId);
-    const key = databaseVercelEnvKey.trim();
-    if (!project || !key || !selectedDatabaseUrl) return;
-    setVercelBusy(true);
-    setVercelHint(null);
-    setError(null);
-    try {
-      await invoke("vercel_upsert_project_env", {
-        payload: {
-          integrationId: vercelIntegration.id,
-          projectId: project.id,
-          projectName: project.name,
-          key,
-          value: selectedDatabaseUrl,
-          targets: vercelTargets,
-        },
-      });
-      setVercelHint(`Env ${key} aggiornata in Vercel (${project.name}).`);
-    } catch (err) {
-      setError(errText(err));
-    } finally {
-      setVercelBusy(false);
-    }
-  }
-
-  async function updateVercelApiKey() {
-    if (!apiKeyResult || !vercelIntegration) return;
-    const project = vercelProjects.find((item) => item.id === selectedVercelProjectId);
-    const key = apiKeyVercelEnvKey.trim();
-    if (!project || !key) return;
-    setVercelBusy(true);
-    setApiKeyVercelHint(null);
-    setError(null);
-    try {
-      await invoke("vercel_upsert_project_env", {
-        payload: {
-          integrationId: vercelIntegration.id,
-          projectId: project.id,
-          projectName: project.name,
-          key,
-          value: apiKeyResult.apiKey,
-          targets: vercelTargets,
-        },
-      });
-      setApiKeyVercelHint(`Env ${key} aggiornata in Vercel (${project.name}).`);
-    } catch (err) {
-      setError(errText(err));
-    } finally {
-      setVercelBusy(false);
-    }
-  }
-
-  function toggleVercelTarget(target: DeployTarget) {
-    setVercelTargets((current) =>
-      current.includes(target) ? current.filter((item) => item !== target) : [...current, target],
-    );
   }
 
   async function copyDatabasePassword() {
     if (!databaseResult) return;
     try {
       await copySensitiveWithAutoClear(databaseResult.password);
-      setDatabaseCopyHint("Password copiata negli appunti temporanei.");
+      setDatabaseCopyHint(t("supabase.passwordCopied"));
     } catch (err) {
       setError(errText(err));
     }
@@ -461,8 +404,8 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
       <ProviderHeader
         providerLabel="SUPABASE"
         title={integration.label}
-        description="Collega un Personal Access Token Supabase per ruotare API key e aggiornare secret Edge Functions."
-        backLabel="← Torna ai servizi"
+        description={t("supabase.description")}
+        backLabel={t("common.backToServices")}
         onBack={onBack}
       />
 
@@ -471,21 +414,21 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
       {!linked ? (
         <form onSubmit={(e) => void handleLink(e)} className="max-w-xl space-y-4 rounded-2xl border border-surface-3/80 bg-surface-1/80 p-6">
           <div>
-            <h2 className="text-sm font-semibold text-ink">Collega Supabase</h2>
+            <h2 className="text-sm font-semibold text-ink">{t("supabase.connectTitle")}</h2>
             <p className="mt-1 text-xs text-ink-muted">
-              Crea un Personal Access Token con accesso ai progetti e ai secret Edge Functions.
+              {t("supabase.connectLead")}
             </p>
           </div>
           <CredentialGuide
             steps={[
-              "Apri Supabase Account → Access Tokens e crea un Personal Access Token dedicato a Rotate.",
-              "Il token deve poter leggere i progetti, leggere/scrivere API key e leggere/scrivere i secret delle Edge Functions.",
-              "Le API key vengono generate da Supabase; Rotate mostra il nuovo valore una sola volta.",
-              "I secret Edge Functions non generano valori: ricevono valori prodotti da un'altra rotazione o incollati esplicitamente.",
+              t("supabase.guide.step1"),
+              t("supabase.guide.step2"),
+              t("supabase.guide.step3"),
+              t("supabase.guide.step4"),
             ]}
             links={[
               { href: "https://supabase.com/docs/reference/api/introduction", label: "Management API" },
-              { href: "https://supabase.com/dashboard/account/tokens", label: "Crea token Supabase" },
+              { href: "https://supabase.com/dashboard/account/tokens", label: t("supabase.links.token") },
               { href: "https://supabase.com/docs/guides/functions/secrets", label: "Edge Function secrets" },
             ]}
           />
@@ -500,30 +443,30 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
             />
           </label>
           <button type="submit" disabled={busy} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-surface-0 disabled:opacity-50">
-            {busy ? "Verifica..." : "Collega account"}
+            {busy ? t("common.verifying") : t("supabase.connectAccount")}
           </button>
         </form>
       ) : !initialLoadComplete || resourcesLoading ? (
         <ProviderLoadingPanel
-          title="Caricamento Supabase"
-          description="Sto scaricando progetti, API key e secret disponibili."
+          title={t("supabase.loadingTitle")}
+          description={t("supabase.loadingDescription")}
         />
       ) : (
         <div className="flex flex-col gap-6">
           <LinkedAccountBar
             details={
               <>
-                <p className="text-xs text-ink-muted">Account collegato</p>
-                <p className="text-sm text-ink">Personal Access Token verificato</p>
+                <p className="text-xs text-ink-muted">{t("common.linkedAccount")}</p>
+                <p className="text-sm text-ink">{t("supabase.verifiedToken")}</p>
               </>
             }
             actions={
               <>
                 <button type="button" disabled={busy} onClick={() => void refreshProjects()} className="rounded-lg border border-surface-3 px-3 py-1.5 text-sm text-ink hover:border-accent/40">
-                  Aggiorna progetti
+                  {t("propagation.refreshProjects")}
                 </button>
                 <button type="button" disabled={busy} onClick={() => void handleUnlink()} className="rounded-lg border border-rose-500/40 px-3 py-1.5 text-sm text-rose-200 hover:bg-rose-500/10">
-                  Rimuovi collegamento
+                  {t("common.unlink")}
                 </button>
               </>
             }
@@ -543,14 +486,14 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
                 ) : null}
               </div>
               <label className="block space-y-1.5 text-xs font-semibold text-ink-muted">
-                <span>Progetto</span>
+                <span>{t("propagation.project")}</span>
                 <select
                   value={selectedProject?.reference ?? ""}
                   onChange={(e) => setSelectedProject(projects.find((project) => project.reference === e.target.value) ?? null)}
                   className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
                 >
                   {projects.length === 0 ? (
-                    <option value="">Nessun progetto rilevato</option>
+                    <option value="">{t("supabase.noProjects")}</option>
                   ) : (
                     projects.map((project) => (
                       <option key={project.reference} value={project.reference}>{project.name}</option>
@@ -563,30 +506,30 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
 
           <section className="order-4 space-y-3 rounded-2xl border border-surface-3/80 bg-surface-1/60 p-5">
             <div>
-              <h2 className="text-sm font-semibold text-ink">Secret custom del progetto</h2>
+              <h2 className="text-sm font-semibold text-ink">{t("supabase.customSecretsTitle")}</h2>
               <p className="mt-1 text-xs text-ink-muted">
-                Qui trovi solo i secret applicativi già presenti in Supabase e non gestiti dai flussi dedicati sopra. Puoi aggiornarli insieme oppure crearne uno nuovo incollando un valore generato altrove, per esempio un secret Turnstile.
+                {t("supabase.customSecretsLead")}
               </p>
             </div>
             <div className="grid gap-4 lg:grid-cols-[1fr_minmax(260px,360px)]">
               <div className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Secret disponibili</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">{t("supabase.availableSecrets")}</h3>
                 <div className="overflow-hidden rounded-xl border border-surface-3/80">
                   <table className="w-full text-left text-sm">
                     <thead className="bg-surface-2/80 text-[11px] uppercase tracking-wide text-ink-muted">
                       <tr>
-                        <th className="px-4 py-3 font-semibold">Aggiorna</th>
-                        <th className="px-4 py-3 font-semibold">Nome</th>
-                        <th className="px-4 py-3 font-semibold">Aggiornato</th>
+                        <th className="px-4 py-3 font-semibold">{t("supabase.colUpdate")}</th>
+                        <th className="px-4 py-3 font-semibold">{t("resend.colName")}</th>
+                        <th className="px-4 py-3 font-semibold">{t("supabase.colUpdated")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-surface-3/60 bg-surface-1/40">
                       {editableSecrets.length === 0 ? (
                         <tr>
                           <td colSpan={3} className="px-4 py-6 text-center">
-                            <p className="text-sm text-ink-muted">Nessun secret custom presente.</p>
+                            <p className="text-sm text-ink-muted">{t("supabase.noCustomSecrets")}</p>
                             <p className="mt-1 text-xs text-ink-muted">
-                              Puoi crearne uno dal pannello a destra inserendo nome e valore.
+                              {t("supabase.noCustomSecretsLead")}
                             </p>
                           </td>
                         </tr>
@@ -611,13 +554,13 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
               </div>
               <div className="space-y-3 rounded-xl border border-surface-3/70 bg-surface-0/40 p-4">
                 <div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Aggiorna secret</h3>
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">{t("supabase.updateSecret")}</h3>
                   <p className="mt-1 text-xs text-ink-muted">
-                    Salva lo stesso valore sui secret selezionati, oppure crea anche un nuovo secret manuale.
+                    {t("supabase.updateSecretLead")}
                   </p>
                 </div>
                 <label className="block space-y-1.5 text-xs font-semibold text-ink-muted">
-                  <span>Aggiungi secret manuale</span>
+                  <span>{t("supabase.addManualSecret")}</span>
                   <input
                     value={secretName}
                     onChange={(e) => setSecretName(e.target.value)}
@@ -626,11 +569,11 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
                     autoComplete="off"
                   />
                   <span className="block font-normal text-ink-muted">
-                    Opzionale: usalo solo se il secret non compare ancora nella tabella.
+                    {t("supabase.manualSecretHint")}
                   </span>
                 </label>
                 <label className="block space-y-1.5 text-xs font-semibold text-ink-muted">
-                  <span>Nuovo valore da salvare</span>
+                  <span>{t("supabase.newValueToSave")}</span>
                   <input
                     type="password"
                     value={secretValue}
@@ -639,12 +582,12 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
                     autoComplete="off"
                   />
                   <span className="block font-normal text-ink-muted">
-                    Incolla qui il valore già generato da un altro servizio, per esempio un nuovo secret Turnstile.
+                    {t("supabase.externalValueHint")}
                   </span>
                 </label>
                 {hint ? <p className="text-xs text-accent">{hint}</p> : null}
                 <button type="button" disabled={busy || !selectedProject || (selectedSecretNames.length === 0 && !secretName.trim()) || !secretValue} onClick={() => void upsertSecret()} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-surface-0 disabled:opacity-50">
-                  {busy ? "Aggiornamento..." : "Salva nei secret"}
+                  {busy ? t("common.updating") : t("supabase.saveSecrets")}
                 </button>
               </div>
             </div>
@@ -652,15 +595,15 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
           <section className="order-2 space-y-3 rounded-2xl border border-surface-3/80 bg-surface-1/60 p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 className="text-sm font-semibold text-ink">API key Supabase</h2>
+                <h2 className="text-sm font-semibold text-ink">{t("supabase.apiKeysTitle")}</h2>
                 <p className="mt-1 text-xs text-ink-muted">
-                  Qui la nuova chiave viene generata da Supabase. Rotate la mostra una sola volta.
+                  {t("supabase.apiKeysLead")}
                 </p>
               </div>
               <DestructiveToggle
                 checked={deleteOldApiKey}
-                title="Revoca vecchia key"
-                description="Solo dopo aver aggiornato gli env"
+                title={t("resend.revokeOld")}
+                description={t("resend.afterEnvUpdate")}
                 onChange={setDeleteOldApiKey}
               />
             </div>
@@ -668,15 +611,15 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
               <table className="w-full text-left text-sm">
                 <thead className="bg-surface-2/80 text-[11px] uppercase tracking-wide text-ink-muted">
                   <tr>
-                    <th className="px-4 py-3 font-semibold">Nome</th>
-                    <th className="px-4 py-3 font-semibold">Tipo</th>
+                    <th className="px-4 py-3 font-semibold">{t("resend.colName")}</th>
+                    <th className="px-4 py-3 font-semibold">{t("vercel.colType")}</th>
                     <th className="px-4 py-3 font-semibold">Prefix</th>
-                    <th className="px-4 py-3 font-semibold">Azioni</th>
+                    <th className="px-4 py-3 font-semibold">{t("resend.colActions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-3/60 bg-surface-1/40">
                   {apiKeys.length === 0 ? (
-                    <tr><td colSpan={4} className="px-4 py-5 text-center text-ink-muted">Nessuna API key rilevata.</td></tr>
+                    <tr><td colSpan={4} className="px-4 py-5 text-center text-ink-muted">{t("supabase.noApiKeys")}</td></tr>
                   ) : (
                     apiKeys.map((key) => {
                       const canRotate = key.keyType === "publishable" || key.keyType === "secret";
@@ -692,7 +635,7 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
                               onClick={() => void rotateApiKey(key)}
                               className="rounded-lg border border-accent/50 px-2.5 py-1 text-xs font-medium text-accent hover:bg-accent/10 disabled:opacity-50"
                             >
-                              {apiKeyBusyId === key.id ? "Rotazione..." : "Ruota"}
+                              {apiKeyBusyId === key.id ? t("supabase.rotating") : t("resend.rotate")}
                             </button>
                           </td>
                         </tr>
@@ -705,15 +648,15 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
           </section>
           <section className="order-3 space-y-3 rounded-2xl border border-rose-500/25 bg-rose-500/5 p-5">
             <div>
-              <h2 className="text-sm font-semibold text-rose-100">Password database Postgres</h2>
+              <h2 className="text-sm font-semibold text-rose-100">{t("supabase.databasePasswordTitle")}</h2>
               <p className="mt-1 text-xs leading-relaxed text-ink-muted">
-                Ruota la password dell'utente Postgres principale e genera una nuova `DATABASE_URL` diretta. Supabase aggiorna i servizi gestiti, ma i tuoi servizi esterni devono essere aggiornati subito.
+                {t("supabase.databasePasswordLead")}
               </p>
             </div>
             {selectedProject ? (
               <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
                 <label className="block space-y-1.5 text-xs font-semibold text-ink-muted">
-                  <span>Conferma project ref</span>
+                  <span>{t("supabase.confirmProjectRef")}</span>
                   <input
                     value={databaseConfirmRef}
                     onChange={(e) => setDatabaseConfirmRef(e.target.value)}
@@ -729,12 +672,12 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
                     onClick={() => void rotateDatabasePassword()}
                     className="rounded-lg border border-rose-500/50 px-3 py-2 text-sm font-semibold text-rose-100 hover:bg-rose-500/10 disabled:opacity-50"
                   >
-                    {databaseBusy ? "Rotazione..." : "Ruota password DB"}
+                    {databaseBusy ? t("supabase.rotating") : t("supabase.rotateDatabasePassword")}
                   </button>
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-ink-muted">Seleziona un progetto prima di ruotare la password database.</p>
+              <p className="text-xs text-ink-muted">{t("supabase.selectProjectForDb")}</p>
             )}
           </section>
         </div>
@@ -743,51 +686,30 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
       {apiKeyResult ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
           <div className="w-full max-w-lg rounded-2xl border border-amber-500/30 bg-surface-1 p-6 shadow-2xl">
-            <h3 className="text-sm font-semibold text-amber-100">Nuova API key Supabase</h3>
+            <h3 className="text-sm font-semibold text-amber-100">{t("supabase.apiKeyResultTitle")}</h3>
             <p className="mt-1 text-xs text-ink-muted">
-              Supabase mostra questo valore solo ora. Aggiorna i servizi che usavano la key precedente.
+              {t("supabase.apiKeyResultLead")}
             </p>
             <p className="mt-3 text-sm text-ink">{apiKeyResult.name}</p>
-              <p className="font-mono text-[11px] text-ink-muted">Tipo: {apiKeyResult.keyType}</p>
+              <p className="font-mono text-[11px] text-ink-muted">{t("vercel.colType")}: {apiKeyResult.keyType}</p>
               <pre className="mt-3 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-surface-0 p-3 font-mono text-xs text-ink">
                 {apiKeyResult.apiKey}
               </pre>
-            {vercelIntegration ? (
-              <VercelEnvWriter
-                title="Aggiorna Vercel env"
-                description="Scrive la nuova API key Supabase negli env del progetto."
-                projects={vercelProjects}
-                selectedProjectId={selectedVercelProjectId}
-                envKey={apiKeyVercelEnvKey}
-                targets={vercelTargets}
-                busy={vercelBusy}
-                hint={apiKeyVercelHint}
-                emptyMessage="Nessun progetto Vercel"
-                onRefreshProjects={() => void refreshVercelProjects()}
-                onSelectProject={(projectId) => {
-                  setSelectedVercelProjectId(projectId);
-                  setApiKeyVercelHint(null);
-                }}
-                onChangeEnvKey={(key) => {
-                  setApiKeyVercelEnvKey(key);
-                  setApiKeyVercelHint(null);
-                }}
-                onToggleTarget={toggleVercelTarget}
-                onWrite={() => void updateVercelApiKey()}
-              />
-            ) : (
-              <p className="mt-3 rounded-xl border border-surface-3/80 bg-surface-0/50 p-3 text-xs text-ink-muted">
-                Collega Vercel da Esplora per scrivere questa API key direttamente negli env del progetto.
-              </p>
-            )}
             {apiKeyCopyHint ? <p className="mt-2 text-xs text-accent">{apiKeyCopyHint}</p> : null}
             <div className="mt-4 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setApiKeyPropagationOpen(true)}
+                className="rounded-lg border border-accent/50 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10"
+              >
+                {t("resend.propagateKey")}
+              </button>
               <button
                 type="button"
                 onClick={() => void copyApiKeyResult()}
                 className="rounded-lg border border-surface-3 px-3 py-1.5 text-sm text-ink hover:border-accent/40"
               >
-                Copia key
+                {t("resend.copyKey")}
               </button>
               <button
                 type="button"
@@ -797,7 +719,7 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
                 }}
                 className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-surface-0"
               >
-                Chiudi
+                {t("common.close")}
               </button>
             </div>
           </div>
@@ -807,14 +729,14 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
       {databaseResult ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
           <div className="max-h-[88vh] w-full max-w-3xl overflow-auto rounded-2xl border border-rose-500/30 bg-surface-1 p-6 shadow-2xl">
-            <h3 className="text-sm font-semibold text-rose-100">Nuova DATABASE_URL</h3>
+            <h3 className="text-sm font-semibold text-rose-100">{t("supabase.databaseUrlResultTitle")}</h3>
             <p className="mt-1 text-xs text-ink-muted">
-              Aggiorna subito pool, backend e deploy che usano la vecchia password. Rotate non salva questi valori.
+              {t("supabase.databaseUrlResultLead")}
             </p>
             <p className="mt-3 font-mono text-[11px] text-ink-muted">Project ref: {databaseResult.projectRef}</p>
             <div className="mt-4 grid gap-3 rounded-xl border border-surface-3/80 bg-surface-0/50 p-4 sm:grid-cols-[220px_1fr]">
               <label className="space-y-1.5 text-xs font-semibold text-ink-muted">
-                <span>Tipo connessione</span>
+                <span>{t("supabase.connectionType")}</span>
                 <select
                   value={databaseUrlMode}
                   onChange={(e) => setDatabaseUrlMode(e.target.value as DatabaseUrlMode)}
@@ -839,36 +761,8 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
             <pre className="mt-3 max-h-44 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-surface-0 p-3 font-mono text-xs text-ink">
               {selectedDatabaseUrl}
             </pre>
-            {vercelIntegration ? (
-              <VercelEnvWriter
-                title="Aggiorna Vercel env"
-                description="Scrive la DATABASE_URL selezionata nei target del progetto."
-                projects={vercelProjects}
-                selectedProjectId={selectedVercelProjectId}
-                envKey={databaseVercelEnvKey}
-                targets={vercelTargets}
-                busy={vercelBusy}
-                hint={vercelHint}
-                emptyMessage="Nessun progetto Vercel"
-                onRefreshProjects={() => void refreshVercelProjects()}
-                onSelectProject={(projectId) => {
-                  setSelectedVercelProjectId(projectId);
-                  setVercelHint(null);
-                }}
-                onChangeEnvKey={(key) => {
-                  setDatabaseVercelEnvKey(key);
-                  setVercelHint(null);
-                }}
-                onToggleTarget={toggleVercelTarget}
-                onWrite={() => void updateVercelDatabaseUrl()}
-              />
-            ) : (
-              <p className="mt-3 rounded-xl border border-surface-3/80 bg-surface-0/50 p-3 text-xs text-ink-muted">
-                Collega Vercel da Esplora per scrivere questa DATABASE_URL direttamente negli env del progetto.
-              </p>
-            )}
             <details className="mt-3 rounded-lg border border-surface-3/80 bg-surface-0/50 p-3">
-              <summary className="cursor-pointer text-xs font-semibold text-ink-muted">Mostra solo password</summary>
+              <summary className="cursor-pointer text-xs font-semibold text-ink-muted">{t("supabase.showPasswordOnly")}</summary>
               <pre className="mt-2 overflow-auto whitespace-pre-wrap break-all font-mono text-xs text-ink">
                 {databaseResult.password}
               </pre>
@@ -877,17 +771,24 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
             <div className="mt-4 flex flex-wrap justify-end gap-2">
               <button
                 type="button"
+                onClick={() => setDatabasePropagationOpen(true)}
+                className="rounded-lg border border-accent/50 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10"
+              >
+                {t("supabase.propagateDatabaseUrl")}
+              </button>
+              <button
+                type="button"
                 onClick={() => void copyDatabasePassword()}
                 className="rounded-lg border border-surface-3 px-3 py-1.5 text-sm text-ink hover:border-accent/40"
               >
-                Copia password
+                {t("supabase.copyPassword")}
               </button>
               <button
                 type="button"
                 onClick={() => void copyDatabaseUrl()}
                 className="rounded-lg border border-surface-3 px-3 py-1.5 text-sm text-ink hover:border-accent/40"
               >
-                Copia DATABASE_URL
+                {t("supabase.copyDatabaseUrl")}
               </button>
               <button
                 type="button"
@@ -897,11 +798,27 @@ export function SupabaseDetail({ integration, integrations = [], onBack }: Props
                 }}
                 className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-surface-0"
               >
-                Chiudi
+                {t("common.close")}
               </button>
             </div>
           </div>
         </div>
+      ) : null}
+      {apiKeyResult ? (
+        <SecretPropagationModal
+          open={apiKeyPropagationOpen}
+          valueLabel={t("supabase.apiKeyValueLabel")}
+          state={apiKeyPropagation}
+          onClose={() => setApiKeyPropagationOpen(false)}
+        />
+      ) : null}
+      {databaseResult ? (
+        <SecretPropagationModal
+          open={databasePropagationOpen}
+          valueLabel={t("supabase.databaseUrlValueLabel")}
+          state={databasePropagation}
+          onClose={() => setDatabasePropagationOpen(false)}
+        />
       ) : null}
     </div>
   );

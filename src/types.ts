@@ -1,6 +1,17 @@
 export type NavId = "home" | "explore" | "services" | "settings";
 
-export type ProviderId = "cloudflare" | "vercel" | "supabase" | "resend" | "oauth_google";
+export type ProviderId =
+  | "cloudflare"
+  | "vercel"
+  | "supabase"
+  | "resend"
+  | "oauth_google"
+  | "github"
+  | "stripe"
+  | "paypal"
+  | "facebook"
+  | "discord"
+  | "twitch";
 
 export type AutomationLevel = "full" | "partial" | "manual";
 
@@ -138,6 +149,23 @@ export type OauthGoogleStatusDto = {
   label: string | null;
 };
 
+export type ManualSecretStatusDto = {
+  linked: boolean;
+  publicId: string | null;
+  label: string | null;
+};
+
+export type GithubStatusDto = {
+  linked: boolean;
+  login: string | null;
+};
+
+export type GithubActionsSecretUpsertResult = {
+  owner: string;
+  repo: string;
+  name: string;
+};
+
 export type SecretStorageDiagnosticsDto = {
   service: string;
   credentialUser: string;
@@ -192,6 +220,18 @@ export type TurnstileRotateResult = {
   sitekey: string;
   name: string;
   secret: string;
+};
+
+export type LocalEnvInspectResult = {
+  path: string;
+  keys: string[];
+  exists: boolean;
+};
+
+export type LocalEnvUpsertResult = {
+  path: string;
+  key: string;
+  created: boolean;
 };
 
 export type WorkerScriptRow = {

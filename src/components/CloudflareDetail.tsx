@@ -2,7 +2,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { copySensitiveWithAutoClear } from "../clipboardSecure";
-import type { DeployTarget } from "../secretDestinations";
 import { AlertMessage } from "./provider/AlertMessage";
 import { LinkedAccountBar } from "./provider/LinkedAccountBar";
 import { ProviderHeader } from "./provider/ProviderHeader";
@@ -27,6 +26,7 @@ import { StorageDiagnosticsPanel } from "./cloudflare/StorageDiagnosticsPanel";
 import { TurnstileRotateResultModal } from "./cloudflare/TurnstileRotateResultModal";
 import { TurnstileSection } from "./cloudflare/TurnstileSection";
 import { WorkersSecretsSection } from "./cloudflare/WorkersSecretsSection";
+import { useTurnstileDestinations } from "./cloudflare/useTurnstileDestinations";
 import type {
   AccessServiceTokenRotateResult,
   AccessServiceTokenRow,
@@ -35,17 +35,9 @@ import type {
   CloudflareStatusDto,
   Integration,
   ManagedSecretDto,
-  PagesProjectRow,
   SecretStorageDiagnosticsDto,
-  SecretsStoreRow,
-  SecretsStoreSecretRow,
-  SupabaseProjectRow,
-  SupabaseSecretRow,
   TurnstileRotateResult,
   TurnstileWidgetRow,
-  VercelProjectRow,
-  WorkerScriptRow,
-  WorkerSecretRow,
 } from "../types";
 
 type Props = {
@@ -64,39 +56,6 @@ export function CloudflareDetail({ integration, integrations = [], onBack }: Pro
   const [accessBusyId, setAccessBusyId] = useState<string | null>(null);
   const [accessResult, setAccessResult] = useState<AccessServiceTokenRotateResult | null>(null);
   const [accessCopyHint, setAccessCopyHint] = useState<string | null>(null);
-  const [workerScripts, setWorkerScripts] = useState<WorkerScriptRow[]>([]);
-  const [workerSecrets, setWorkerSecrets] = useState<WorkerSecretRow[]>([]);
-  const [selectedWorker, setSelectedWorker] = useState("");
-  const [workerSecretName, setWorkerSecretName] = useState("TURNSTILE_SECRET_KEY");
-  const [workerUpdateHint, setWorkerUpdateHint] = useState<string | null>(null);
-  const [workerBusy, setWorkerBusy] = useState(false);
-  const [pagesProjects, setPagesProjects] = useState<PagesProjectRow[]>([]);
-  const [selectedPagesProject, setSelectedPagesProject] = useState("");
-  const [pagesEnvironment, setPagesEnvironment] = useState<"production" | "preview">("production");
-  const [pagesSecretName, setPagesSecretName] = useState("TURNSTILE_SECRET_KEY");
-  const [pagesBusy, setPagesBusy] = useState(false);
-  const [pagesUpdateHint, setPagesUpdateHint] = useState<string | null>(null);
-  const [secretsStores, setSecretsStores] = useState<SecretsStoreRow[]>([]);
-  const [secretsStoreSecrets, setSecretsStoreSecrets] = useState<SecretsStoreSecretRow[]>([]);
-  const [selectedSecretsStore, setSelectedSecretsStore] = useState("");
-  const [secretsStoreSecretId, setSecretsStoreSecretId] = useState("");
-  const [secretsStoreSecretName, setSecretsStoreSecretName] = useState("TURNSTILE_SECRET_KEY");
-  const [secretsStoreScopes, setSecretsStoreScopes] = useState("workers");
-  const [secretsStoreBusy, setSecretsStoreBusy] = useState(false);
-  const [secretsStoreUpdateHint, setSecretsStoreUpdateHint] = useState<string | null>(null);
-  const [vercelProjects, setVercelProjects] = useState<VercelProjectRow[]>([]);
-  const [selectedVercelProjectId, setSelectedVercelProjectId] = useState("");
-  const [vercelEnvKey, setVercelEnvKey] = useState("TURNSTILE_SECRET_KEY");
-  const [vercelTargets, setVercelTargets] = useState(["production"]);
-  const [vercelBusy, setVercelBusy] = useState(false);
-  const [vercelUpdateHint, setVercelUpdateHint] = useState<string | null>(null);
-  const [supabaseProjects, setSupabaseProjects] = useState<SupabaseProjectRow[]>([]);
-  const [supabaseSecrets, setSupabaseSecrets] = useState<SupabaseSecretRow[]>([]);
-  const [selectedSupabaseProjectRef, setSelectedSupabaseProjectRef] = useState("");
-  const [supabaseSecretName, setSupabaseSecretName] = useState("TURNSTILE_SECRET_KEY");
-  const [selectedSupabaseSecretNames, setSelectedSupabaseSecretNames] = useState<string[]>([]);
-  const [supabaseBusy, setSupabaseBusy] = useState(false);
-  const [supabaseUpdateHint, setSupabaseUpdateHint] = useState<string | null>(null);
   const [managedSecrets, setManagedSecrets] = useState<ManagedSecretDto[]>([]);
   const [accountId, setAccountId] = useState("");
   const [apiToken, setApiToken] = useState("");
@@ -125,6 +84,113 @@ export function CloudflareDetail({ integration, integrations = [], onBack }: Pro
   const integrationId = integration.id;
   const vercelIntegration = integrations.find((item) => item.provider === "vercel");
   const supabaseIntegration = integrations.find((item) => item.provider === "supabase");
+  const githubIntegration = integrations.find((item) => item.provider === "github");
+  const linked = status?.linked ?? false;
+  const destinations = useTurnstileDestinations({
+    integrationId,
+    linked,
+    turnstileResult,
+    vercelIntegration,
+    supabaseIntegration,
+    githubIntegration,
+    setError,
+  });
+  const {
+    workerScripts,
+    workerSecrets,
+    selectedWorker,
+    setSelectedWorker,
+    workerSecretName,
+    setWorkerSecretName,
+    workerUpdateHint,
+    setWorkerUpdateHint,
+    workerBusy,
+    pagesProjects,
+    selectedPagesProject,
+    setSelectedPagesProject,
+    pagesEnvironment,
+    setPagesEnvironment,
+    pagesSecretName,
+    setPagesSecretName,
+    pagesBusy,
+    pagesUpdateHint,
+    setPagesUpdateHint,
+    secretsStores,
+    secretsStoreSecrets,
+    selectedSecretsStore,
+    setSelectedSecretsStore,
+    setSecretsStoreSecretId,
+    secretsStoreSecretName,
+    setSecretsStoreSecretName,
+    secretsStoreScopes,
+    setSecretsStoreScopes,
+    secretsStoreBusy,
+    secretsStoreUpdateHint,
+    setSecretsStoreUpdateHint,
+    vercelProjects,
+    selectedVercelProjectId,
+    setSelectedVercelProjectId,
+    vercelEnvKey,
+    setVercelEnvKey,
+    vercelTargets,
+    vercelBusy,
+    vercelUpdateHint,
+    setVercelUpdateHint,
+    supabaseProjects,
+    supabaseSecrets,
+    selectedSupabaseProjectRef,
+    setSelectedSupabaseProjectRef,
+    supabaseSecretName,
+    setSupabaseSecretName,
+    selectedSupabaseSecretNames,
+    supabaseBusy,
+    supabaseUpdateHint,
+    setSupabaseUpdateHint,
+    localEnvPath,
+    setLocalEnvPath,
+    localEnvKeys,
+    localEnvKey,
+    setLocalEnvKey,
+    localEnvBusy,
+    localEnvUpdateHint,
+    includeVercel,
+    setIncludeVercel,
+    includeSupabase,
+    setIncludeSupabase,
+    includeLocalEnv,
+    setIncludeLocalEnv,
+    batchBusy,
+    batchHint,
+    githubOwner,
+    setGithubOwner,
+    githubRepo,
+    setGithubRepo,
+    githubSecretName,
+    setGithubSecretName,
+    githubBusy,
+    githubUpdateHint,
+    setGithubUpdateHint,
+    includeGithub,
+    setIncludeGithub,
+    resetDestinations,
+    resetDestinationHints,
+    refreshWorkerScripts,
+    refreshPagesProjects,
+    refreshSecretsStores,
+    refreshVercelProjects,
+    refreshSupabaseProjects,
+    updateWorkerWithTurnstileSecret,
+    updatePagesWithTurnstileSecret,
+    updateSecretsStoreWithTurnstileSecret,
+    updateVercelWithTurnstileSecret,
+    updateSupabaseWithTurnstileSecret,
+    inspectLocalEnv,
+    updateLocalEnvWithTurnstileSecret,
+    updateGithubWithTurnstileSecret,
+    applySelectedDestinations,
+    toggleVercelTarget,
+    toggleSupabaseSecretName,
+  } = destinations;
 
   const refreshStatus = useCallback(async () => {
     try {
@@ -171,183 +237,6 @@ export function CloudflareDetail({ integration, integrations = [], onBack }: Pro
     }
   }, [integrationId]);
 
-  const refreshWorkerScripts = useCallback(async () => {
-    try {
-      const list = await invoke<WorkerScriptRow[]>("cloudflare_list_worker_scripts", {
-        integrationId,
-      });
-      setWorkerScripts(list);
-      setSelectedWorker((current) =>
-        current && list.some((worker) => worker.id === current) ? current : list[0]?.id || "",
-      );
-    } catch {
-      setWorkerScripts([]);
-      setWorkerSecrets([]);
-      setSelectedWorker("");
-    }
-  }, [integrationId]);
-
-  const refreshWorkerSecrets = useCallback(
-    async (scriptName: string) => {
-      const name = scriptName.trim();
-      if (!name) {
-        setWorkerSecrets([]);
-        return;
-      }
-      try {
-        const list = await invoke<WorkerSecretRow[]>("cloudflare_list_worker_secrets", {
-          integrationId,
-          scriptName: name,
-        });
-        setWorkerSecrets(list);
-        const preferred =
-          list.find((secret) => secret.name.toUpperCase().includes("TURNSTILE"))?.name ??
-          list[0]?.name ??
-          "TURNSTILE_SECRET_KEY";
-        setWorkerSecretName((current) => current || preferred);
-      } catch {
-        setWorkerSecrets([]);
-      }
-    },
-    [integrationId],
-  );
-
-  const refreshPagesProjects = useCallback(async () => {
-    try {
-      const list = await invoke<PagesProjectRow[]>("cloudflare_list_pages_projects", {
-        integrationId,
-      });
-      setPagesProjects(list);
-      setSelectedPagesProject((current) =>
-        current && list.some((project) => project.name === current) ? current : list[0]?.name || "",
-      );
-    } catch {
-      setPagesProjects([]);
-      setSelectedPagesProject("");
-    }
-  }, [integrationId]);
-
-  const refreshSecretsStores = useCallback(async () => {
-    try {
-      const list = await invoke<SecretsStoreRow[]>("cloudflare_list_secrets_stores", {
-        integrationId,
-      });
-      setSecretsStores(list);
-      setSelectedSecretsStore((current) =>
-        current && list.some((store) => store.id === current) ? current : list[0]?.id || "",
-      );
-    } catch {
-      setSecretsStores([]);
-      setSecretsStoreSecrets([]);
-      setSelectedSecretsStore("");
-    }
-  }, [integrationId]);
-
-  const refreshSecretsStoreSecrets = useCallback(
-    async (storeId: string) => {
-      const id = storeId.trim();
-      if (!id) {
-        setSecretsStoreSecrets([]);
-        return;
-      }
-      try {
-        const list = await invoke<SecretsStoreSecretRow[]>(
-          "cloudflare_list_secrets_store_secrets",
-          { integrationId, storeId: id },
-        );
-        setSecretsStoreSecrets(list);
-        const preferred =
-          list.find((secret) => secret.name.toUpperCase().includes("TURNSTILE")) ?? list[0];
-        if (preferred) {
-          setSecretsStoreSecretId((current) => current || preferred.id);
-          setSecretsStoreSecretName((current) => current || preferred.name);
-          setSecretsStoreScopes((current) => current || preferred.scopes.join(", "));
-        }
-      } catch {
-        setSecretsStoreSecrets([]);
-      }
-    },
-    [integrationId],
-  );
-
-  const refreshVercelProjects = useCallback(async () => {
-    if (!vercelIntegration) {
-      setVercelProjects([]);
-      setSelectedVercelProjectId("");
-      return;
-    }
-    try {
-      const list = await invoke<VercelProjectRow[]>("vercel_list_projects", {
-        integrationId: vercelIntegration.id,
-      });
-      setVercelProjects(list);
-      setSelectedVercelProjectId((current) =>
-        current && list.some((project) => project.id === current) ? current : list[0]?.id || "",
-      );
-    } catch {
-      setVercelProjects([]);
-      setSelectedVercelProjectId("");
-    }
-  }, [vercelIntegration]);
-
-  const refreshSupabaseProjects = useCallback(async () => {
-    if (!supabaseIntegration) {
-      setSupabaseProjects([]);
-      setSelectedSupabaseProjectRef("");
-      return;
-    }
-    try {
-      const list = await invoke<SupabaseProjectRow[]>("supabase_list_projects", {
-        integrationId: supabaseIntegration.id,
-      });
-      setSupabaseProjects(list);
-      setSelectedSupabaseProjectRef((current) =>
-        current && list.some((project) => project.reference === current)
-          ? current
-          : list[0]?.reference || "",
-      );
-    } catch {
-      setSupabaseProjects([]);
-      setSelectedSupabaseProjectRef("");
-    }
-  }, [supabaseIntegration]);
-
-  const refreshSupabaseSecrets = useCallback(
-    async (projectRef: string) => {
-      if (!supabaseIntegration || !projectRef.trim()) {
-        setSupabaseSecrets([]);
-        setSelectedSupabaseSecretNames([]);
-        return;
-      }
-      try {
-        const list = await invoke<SupabaseSecretRow[]>("supabase_list_project_secrets", {
-          integrationId: supabaseIntegration.id,
-          projectRef,
-        });
-        setSupabaseSecrets(list);
-        setSupabaseSecretName(
-          list.find((secret) => secret.name.toUpperCase().includes("TURNSTILE"))?.name ||
-            list[0]?.name ||
-            "TURNSTILE_SECRET_KEY",
-        );
-        const preferred =
-          list.find((secret) => secret.name.toUpperCase().includes("TURNSTILE"))?.name ||
-          list[0]?.name;
-        setSelectedSupabaseSecretNames((current) =>
-          current.length > 0 && current.every((name) => list.some((secret) => secret.name === name))
-            ? current
-            : preferred
-              ? [preferred]
-              : [],
-        );
-      } catch {
-        setSupabaseSecrets([]);
-        setSelectedSupabaseSecretNames([]);
-      }
-    },
-    [supabaseIntegration],
-  );
-
   const refreshManagedSecrets = useCallback(async () => {
     try {
       const list = await invoke<ManagedSecretDto[]>("cloudflare_managed_secrets_list", {
@@ -391,38 +280,24 @@ export function CloudflareDetail({ integration, integrations = [], onBack }: Pro
       setTokens([]);
       setTurnstileWidgets([]);
       setAccessServiceTokens([]);
-      setWorkerScripts([]);
-      setWorkerSecrets([]);
-      setPagesProjects([]);
-      setSecretsStores([]);
-      setSecretsStoreSecrets([]);
-      setVercelProjects([]);
-      setSupabaseProjects([]);
-      setSupabaseSecrets([]);
-      setSelectedSupabaseSecretNames([]);
+      resetDestinations();
       setManagedSecrets([]);
       setResourcesLoading(false);
       setInitialLoadComplete(true);
     }
-  }, [status?.linked, refreshTokens, refreshTurnstileWidgets, refreshAccessServiceTokens, refreshWorkerScripts, refreshPagesProjects, refreshSecretsStores, refreshVercelProjects, refreshSupabaseProjects, refreshManagedSecrets]);
-
-  useEffect(() => {
-    if (status?.linked && selectedWorker) {
-      void refreshWorkerSecrets(selectedWorker);
-    }
-  }, [status?.linked, selectedWorker, refreshWorkerSecrets]);
-
-  useEffect(() => {
-    if (status?.linked && selectedSecretsStore) {
-      void refreshSecretsStoreSecrets(selectedSecretsStore);
-    }
-  }, [status?.linked, selectedSecretsStore, refreshSecretsStoreSecrets]);
-
-  useEffect(() => {
-    if (status?.linked && selectedSupabaseProjectRef) {
-      void refreshSupabaseSecrets(selectedSupabaseProjectRef);
-    }
-  }, [status?.linked, selectedSupabaseProjectRef, refreshSupabaseSecrets]);
+  }, [
+    status?.linked,
+    refreshTokens,
+    refreshTurnstileWidgets,
+    refreshAccessServiceTokens,
+    refreshWorkerScripts,
+    refreshPagesProjects,
+    refreshSecretsStores,
+    refreshVercelProjects,
+    refreshSupabaseProjects,
+    resetDestinations,
+    refreshManagedSecrets,
+  ]);
 
   async function handleLink(e: React.FormEvent) {
     e.preventDefault();
@@ -462,15 +337,7 @@ export function CloudflareDetail({ integration, integrations = [], onBack }: Pro
       setTokens([]);
       setTurnstileWidgets([]);
       setAccessServiceTokens([]);
-      setWorkerScripts([]);
-      setWorkerSecrets([]);
-      setPagesProjects([]);
-      setSecretsStores([]);
-      setSecretsStoreSecrets([]);
-      setVercelProjects([]);
-      setSupabaseProjects([]);
-      setSupabaseSecrets([]);
-      setSelectedSupabaseSecretNames([]);
+      resetDestinations();
       setApiToken("");
     } catch (err) {
       setError(errText(err));
@@ -479,7 +346,6 @@ export function CloudflareDetail({ integration, integrations = [], onBack }: Pro
     }
   }
 
-  const linked = status?.linked ?? false;
   const managedExternalIds = new Set(managedSecrets.map((secret) => secret.externalId));
 
   async function runStorageDiagnostics() {
@@ -684,159 +550,6 @@ export function CloudflareDetail({ integration, integrations = [], onBack }: Pro
     }
   }
 
-  async function updateWorkerWithTurnstileSecret() {
-    if (!turnstileResult) return;
-    const scriptName = selectedWorker.trim();
-    const secretName = workerSecretName.trim();
-    if (!scriptName || !secretName) return;
-    setWorkerBusy(true);
-    setWorkerUpdateHint(null);
-    setError(null);
-    try {
-      const row = await invoke<WorkerSecretRow>("cloudflare_update_worker_secret", {
-        integrationId,
-        scriptName,
-        secretName,
-        secretValue: turnstileResult.secret,
-      });
-      setWorkerUpdateHint(`Secret ${row.name} aggiornato in ${scriptName}.`);
-      await refreshWorkerSecrets(scriptName);
-    } catch (err) {
-      setError(errText(err));
-    } finally {
-      setWorkerBusy(false);
-    }
-  }
-
-  async function updatePagesWithTurnstileSecret() {
-    if (!turnstileResult) return;
-    const projectName = selectedPagesProject.trim();
-    const secretName = pagesSecretName.trim();
-    if (!projectName || !secretName) return;
-    setPagesBusy(true);
-    setPagesUpdateHint(null);
-    setError(null);
-    try {
-      await invoke("cloudflare_update_pages_secret", {
-        integrationId,
-        projectName,
-        environment: pagesEnvironment,
-        secretName,
-        secretValue: turnstileResult.secret,
-      });
-      setPagesUpdateHint(`Secret ${secretName} aggiornato in Pages (${projectName}, ${pagesEnvironment}).`);
-      await refreshPagesProjects();
-    } catch (err) {
-      setError(errText(err));
-    } finally {
-      setPagesBusy(false);
-    }
-  }
-
-  async function updateSecretsStoreWithTurnstileSecret() {
-    if (!turnstileResult) return;
-    const storeId = selectedSecretsStore.trim();
-    const secretName = secretsStoreSecretName.trim();
-    if (!storeId || !secretName) return;
-    const scopes = secretsStoreScopes
-      .split(",")
-      .map((scope) => scope.trim())
-      .filter(Boolean);
-    setSecretsStoreBusy(true);
-    setSecretsStoreUpdateHint(null);
-    setError(null);
-    try {
-      const row = await invoke<SecretsStoreSecretRow>("cloudflare_upsert_secrets_store_secret", {
-        payload: {
-          integrationId,
-          storeId,
-          secretId: secretsStoreSecretId.trim() || null,
-          secretName,
-          secretValue: turnstileResult.secret,
-          scopes,
-        },
-      });
-      setSecretsStoreSecretId(row.id);
-      setSecretsStoreSecretName(row.name);
-      setSecretsStoreUpdateHint(`Secret ${row.name} aggiornato in Secrets Store.`);
-      await refreshSecretsStoreSecrets(storeId);
-    } catch (err) {
-      setError(errText(err));
-    } finally {
-      setSecretsStoreBusy(false);
-    }
-  }
-
-  async function updateVercelWithTurnstileSecret() {
-    if (!turnstileResult || !vercelIntegration) return;
-    const project = vercelProjects.find((item) => item.id === selectedVercelProjectId);
-    const key = vercelEnvKey.trim();
-    if (!project || !key) return;
-    setVercelBusy(true);
-    setVercelUpdateHint(null);
-    setError(null);
-    try {
-      await invoke("vercel_upsert_project_env", {
-        payload: {
-          integrationId: vercelIntegration.id,
-          projectId: project.id,
-          projectName: project.name,
-          key,
-          value: turnstileResult.secret,
-          targets: vercelTargets,
-        },
-      });
-      setVercelUpdateHint(`Env ${key} aggiornata in Vercel (${project.name}).`);
-    } catch (err) {
-      setError(errText(err));
-    } finally {
-      setVercelBusy(false);
-    }
-  }
-
-  async function updateSupabaseWithTurnstileSecret() {
-    if (!turnstileResult || !supabaseIntegration) return;
-    const project = supabaseProjects.find((item) => item.reference === selectedSupabaseProjectRef);
-    const names = selectedSupabaseSecretNames.length > 0
-      ? selectedSupabaseSecretNames
-      : [supabaseSecretName.trim()].filter(Boolean);
-    if (!project || names.length === 0) return;
-    setSupabaseBusy(true);
-    setSupabaseUpdateHint(null);
-    setError(null);
-    try {
-      await invoke("supabase_upsert_project_secrets", {
-        payload: {
-          integrationId: supabaseIntegration.id,
-          projectRef: project.reference,
-          projectName: project.name,
-          names,
-          value: turnstileResult.secret,
-        },
-      });
-      setSupabaseUpdateHint(`${names.length} secret aggiornati in Supabase (${project.name}).`);
-      await refreshSupabaseSecrets(project.reference);
-    } catch (err) {
-      setError(errText(err));
-    } finally {
-      setSupabaseBusy(false);
-    }
-  }
-
-  function toggleVercelTarget(target: DeployTarget) {
-    setVercelTargets((current) =>
-      current.includes(target)
-        ? current.filter((item) => item !== target)
-        : [...current, target],
-    );
-  }
-
-  function toggleSupabaseSecretName(name: string) {
-    setSelectedSupabaseSecretNames((current) =>
-      current.includes(name) ? current.filter((item) => item !== name) : [...current, name],
-    );
-  }
-
   return (
     <div className="flex flex-1 flex-col gap-6 overflow-auto px-10 py-10">
       <ProviderHeader
@@ -905,7 +618,7 @@ export function CloudflareDetail({ integration, integrations = [], onBack }: Pro
                   onClick={() => void runStorageDiagnostics()}
                   className="rounded-lg border border-surface-3 px-3 py-1.5 text-sm text-ink hover:border-accent/40"
                 >
-                  {storageDiagnostics ? "Chiudi diagnostica" : "Diagnostica storage"}
+                  {storageDiagnostics ? t("cloudflare.closeDiagnostics") : t("cloudflare.storageDiagnostics")}
                 </button>
                 <button
                   type="button"
@@ -1080,11 +793,7 @@ export function CloudflareDetail({ integration, integrations = [], onBack }: Pro
           onClose={() => {
             setTurnstileResult(null);
             setTurnstileCopyHint(null);
-            setWorkerUpdateHint(null);
-            setPagesUpdateHint(null);
-            setSecretsStoreUpdateHint(null);
-            setVercelUpdateHint(null);
-            setSupabaseUpdateHint(null);
+            resetDestinationHints();
           }}
           workerScripts={workerScripts}
           workerSecrets={workerSecrets}
@@ -1157,6 +866,34 @@ export function CloudflareDetail({ integration, integrations = [], onBack }: Pro
           }}
           onToggleVercelTarget={toggleVercelTarget}
           onWriteVercel={() => void updateVercelWithTurnstileSecret()}
+          localEnvPath={localEnvPath}
+          localEnvKeys={localEnvKeys}
+          localEnvKey={localEnvKey}
+          localEnvBusy={localEnvBusy}
+          localEnvUpdateHint={localEnvUpdateHint}
+          onLocalEnvPathChange={setLocalEnvPath}
+          onInspectLocalEnv={() => void inspectLocalEnv()}
+          onLocalEnvKeyChange={setLocalEnvKey}
+          onWriteLocalEnv={() => void updateLocalEnvWithTurnstileSecret()}
+          hasGithubIntegration={Boolean(githubIntegration)}
+          githubOwner={githubOwner}
+          githubRepo={githubRepo}
+          githubSecretName={githubSecretName}
+          githubBusy={githubBusy}
+          githubUpdateHint={githubUpdateHint}
+          onGithubOwnerChange={(value) => {
+            setGithubOwner(value);
+            setGithubUpdateHint(null);
+          }}
+          onGithubRepoChange={(value) => {
+            setGithubRepo(value);
+            setGithubUpdateHint(null);
+          }}
+          onGithubSecretNameChange={(value) => {
+            setGithubSecretName(value);
+            setGithubUpdateHint(null);
+          }}
+          onWriteGithub={() => void updateGithubWithTurnstileSecret()}
           hasSupabaseIntegration={Boolean(supabaseIntegration)}
           supabaseProjects={supabaseProjects}
           supabaseSecrets={supabaseSecrets}
@@ -1176,6 +913,17 @@ export function CloudflareDetail({ integration, integrations = [], onBack }: Pro
           }}
           onToggleSupabaseSecretName={toggleSupabaseSecretName}
           onWriteSupabase={() => void updateSupabaseWithTurnstileSecret()}
+          includeVercel={includeVercel}
+          includeSupabase={includeSupabase}
+          includeLocalEnv={includeLocalEnv}
+          includeGithub={includeGithub}
+          batchBusy={batchBusy}
+          batchHint={batchHint}
+          onIncludeVercelChange={setIncludeVercel}
+          onIncludeSupabaseChange={setIncludeSupabase}
+          onIncludeLocalEnvChange={setIncludeLocalEnv}
+          onIncludeGithubChange={setIncludeGithub}
+          onApplySelected={() => void applySelectedDestinations()}
         />
       ) : null}
       {revealOpen && revealedToken ? (
