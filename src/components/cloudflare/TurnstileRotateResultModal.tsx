@@ -1,4 +1,5 @@
 ﻿import { useState } from "react";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useTranslation } from "react-i18next";
 import type { DeployTarget } from "../../secretDestinations";
 import type {
@@ -196,6 +197,17 @@ export function TurnstileRotateResultModal({
 }: Props) {
   const { t } = useTranslation();
   const [propagationOpen, setPropagationOpen] = useState(false);
+
+  async function chooseLocalEnvFile() {
+    const selected = await openDialog({
+      multiple: false,
+      directory: false,
+      title: t("propagation.chooseEnvFile"),
+    });
+    if (typeof selected === "string") {
+      onLocalEnvPathChange(selected);
+    }
+  }
 
   return (
     <>
@@ -610,13 +622,22 @@ export function TurnstileRotateResultModal({
           </div>
           <label className="mt-3 block space-y-1.5 text-xs font-semibold text-ink-muted">
             <span>{t("propagation.envFile")}</span>
-            <input
-              value={localEnvPath}
-              onChange={(event) => onLocalEnvPathChange(event.target.value)}
-              className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 font-mono text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
-              placeholder="C:\\path\\project\\.env.local"
-              autoComplete="off"
-            />
+            <div className="flex gap-2">
+              <input
+                value={localEnvPath}
+                onChange={(event) => onLocalEnvPathChange(event.target.value)}
+                className="min-w-0 flex-1 rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 font-mono text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
+                placeholder="C:\\path\\project\\.env.local"
+                autoComplete="off"
+              />
+              <button
+                type="button"
+                onClick={() => void chooseLocalEnvFile()}
+                className="rounded-lg border border-surface-3 px-3 py-2 text-sm font-medium text-ink hover:border-accent/40"
+              >
+                {t("propagation.browse")}
+              </button>
+            </div>
           </label>
           <label className="mt-3 block space-y-1.5 text-xs font-semibold text-ink-muted">
             <span>{t("propagation.variable")}</span>

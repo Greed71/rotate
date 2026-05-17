@@ -17,6 +17,7 @@ type ProviderCopy = {
   label: string;
   defaultEnvKey: string;
   links: Array<{ href: string; label: string }>;
+  secretKinds: string[];
 };
 
 const COPY: Record<ManualProvider, ProviderCopy> = {
@@ -24,26 +25,31 @@ const COPY: Record<ManualProvider, ProviderCopy> = {
     label: "STRIPE",
     links: [{ href: "https://dashboard.stripe.com/apikeys", label: "Stripe API keys" }],
     defaultEnvKey: "STRIPE_SECRET_KEY",
+    secretKinds: ["secretKey", "restrictedKey"],
   },
   paypal: {
     label: "PAYPAL",
     links: [{ href: "https://developer.paypal.com/dashboard/applications/live", label: "PayPal Apps & Credentials" }],
     defaultEnvKey: "PAYPAL_CLIENT_SECRET",
+    secretKinds: ["clientSecretLive", "clientSecretSandbox"],
   },
   facebook: {
     label: "FACEBOOK",
     links: [{ href: "https://developers.facebook.com/apps/", label: "Meta for Developers Apps" }],
     defaultEnvKey: "FACEBOOK_APP_SECRET",
+    secretKinds: ["appSecret"],
   },
   discord: {
     label: "DISCORD",
     links: [{ href: "https://discord.com/developers/applications", label: "Discord Developer Portal" }],
     defaultEnvKey: "DISCORD_BOT_TOKEN",
+    secretKinds: ["botToken", "clientSecret"],
   },
   twitch: {
     label: "TWITCH",
     links: [{ href: "https://dev.twitch.tv/console/apps", label: "Twitch Developer Console" }],
     defaultEnvKey: "TWITCH_CLIENT_SECRET",
+    secretKinds: ["clientSecret"],
   },
 };
 
@@ -66,6 +72,8 @@ export function ManualSecretProviderDetail({
   const [publicId, setPublicId] = useState("");
   const [secret, setSecret] = useState("");
   const [revealedSecret, setRevealedSecret] = useState("");
+  const [secretKind, setSecretKind] = useState(copy.secretKinds[0]);
+  const [oldSecretPending, setOldSecretPending] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
@@ -98,6 +106,13 @@ export function ManualSecretProviderDetail({
   }, [refreshStatus]);
 
   useEffect(() => {
+    setSecretKind(COPY[provider].secretKinds[0]);
+    setOldSecretPending(false);
+    setError(null);
+    setHint(null);
+  }, [provider]);
+
+  useEffect(() => {
     if (linked && propagationVercelIntegrationId) void refreshPropagationVercelProjects();
   }, [linked, propagationVercelIntegrationId, refreshPropagationVercelProjects]);
 
@@ -119,6 +134,7 @@ export function ManualSecretProviderDetail({
       setStatus(next);
       setSecret("");
       setRevealedSecret(nextSecret);
+      setOldSecretPending(Boolean(nextSecret));
       setPropagationOpen(false);
       setHint(nextSecret ? t("manualProviders.secretSaved") : t("manualProviders.referenceSaved"));
     } catch (err) {
@@ -137,6 +153,7 @@ export function ManualSecretProviderDetail({
       setPublicId("");
       setSecret("");
       setRevealedSecret("");
+      setOldSecretPending(false);
     } catch (err) {
       setError(errText(err));
     } finally {
@@ -163,6 +180,32 @@ export function ManualSecretProviderDetail({
         ]}
         links={copy.links}
       />
+      <section className="grid gap-3 md:grid-cols-3">
+        <div className="rounded-2xl border border-surface-3/80 bg-surface-1/70 p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
+            {t("manualProviders.automationLabel")}
+          </p>
+          <p className="mt-2 text-sm font-semibold text-amber-100">
+            {t(`manualProviders.${provider}.automationTitle`)}
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-ink-muted">
+            {t(`manualProviders.${provider}.automationLead`)}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-surface-3/80 bg-surface-1/70 p-4 md:col-span-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
+            {t("manualProviders.workflowLabel")}
+          </p>
+          <ol className="mt-2 grid gap-2 text-xs text-ink-muted sm:grid-cols-2">
+            {[0, 1, 2, 3].map((index) => (
+              <li key={index} className="rounded-lg border border-surface-3/70 bg-surface-0/40 px-3 py-2">
+                <span className="mr-2 text-accent">{index + 1}</span>
+                {t(`manualProviders.workflow.${index}`)}
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
       {linked ? (
         <LinkedAccountBar
           details={
@@ -195,6 +238,23 @@ export function ManualSecretProviderDetail({
           </p>
         </div>
         <label className="block space-y-1.5 text-xs font-semibold text-ink-muted">
+          <span>{t("manualProviders.secretKind")}</span>
+          <select
+            value={secretKind}
+            onChange={(e) => setSecretKind(e.target.value)}
+            className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
+          >
+            {copy.secretKinds.map((kind) => (
+              <option key={kind} value={kind}>
+                {t(`manualProviders.${provider}.secretKinds.${kind}`)}
+              </option>
+            ))}
+          </select>
+          <span className="block font-normal text-ink-muted">
+            {t(`manualProviders.${provider}.secretKindHints.${secretKind}`)}
+          </span>
+        </label>
+        <label className="block space-y-1.5 text-xs font-semibold text-ink-muted">
           <span>{t(`manualProviders.${provider}.publicIdLabel`)}</span>
           <input
             value={publicId}
@@ -217,6 +277,22 @@ export function ManualSecretProviderDetail({
           </span>
         </label>
         {hint ? <p className="text-xs text-accent">{hint}</p> : null}
+        {oldSecretPending ? (
+          <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3">
+            <label className="flex items-start gap-2 text-xs text-amber-100">
+              <input
+                type="checkbox"
+                checked={!oldSecretPending}
+                onChange={(e) => setOldSecretPending(!e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="block font-semibold">{t("manualProviders.oldSecretChecklistTitle")}</span>
+                <span className="text-amber-100/80">{t("manualProviders.oldSecretChecklistLead")}</span>
+              </span>
+            </label>
+          </div>
+        ) : null}
         <button
           type="submit"
           disabled={busy || !publicId.trim()}

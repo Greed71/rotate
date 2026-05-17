@@ -1,3 +1,4 @@
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useTranslation } from "react-i18next";
 import type { SecretPropagationState } from "./useSecretPropagation";
 import { VercelEnvWriter } from "./VercelEnvWriter";
@@ -21,6 +22,17 @@ export function SecretPropagationModal({
 }: Props) {
   const { t } = useTranslation();
   if (!open) return null;
+
+  async function chooseLocalEnvFile() {
+    const selected = await openDialog({
+      multiple: false,
+      directory: false,
+      title: t("propagation.chooseEnvFile"),
+    });
+    if (typeof selected === "string") {
+      state.setLocalEnvPath(selected);
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 px-4">
@@ -142,13 +154,22 @@ export function SecretPropagationModal({
           </div>
           <label className="mt-3 block space-y-1.5 text-xs font-semibold text-ink-muted">
             <span>{t("propagation.envFile")}</span>
-            <input
-              value={state.localEnvPath}
-              onChange={(event) => state.setLocalEnvPath(event.target.value)}
-              className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 font-mono text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
-              placeholder="C:\\path\\project\\.env.local"
-              autoComplete="off"
-            />
+            <div className="flex gap-2">
+              <input
+                value={state.localEnvPath}
+                onChange={(event) => state.setLocalEnvPath(event.target.value)}
+                className="min-w-0 flex-1 rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 font-mono text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
+                placeholder="C:\\path\\project\\.env.local"
+                autoComplete="off"
+              />
+              <button
+                type="button"
+                onClick={() => void chooseLocalEnvFile()}
+                className="rounded-lg border border-surface-3 px-3 py-2 text-sm font-medium text-ink hover:border-accent/40"
+              >
+                {t("propagation.browse")}
+              </button>
+            </div>
           </label>
           <label className="mt-3 block space-y-1.5 text-xs font-semibold text-ink-muted">
             <span>{t("propagation.variable")}</span>

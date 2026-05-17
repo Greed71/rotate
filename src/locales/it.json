@@ -49,6 +49,8 @@
     "localEnvLead": "Indica un file .env: Rotate legge solo i nomi delle variabili e scrive il nuovo valore.",
     "readKeys": "Leggi chiavi",
     "envFile": "File env",
+    "chooseEnvFile": "Scegli file env",
+    "browse": "Sfoglia",
     "variable": "Variabile",
     "writeLocalEnv": "Scrivi in env locale",
     "githubTitle": "Aggiorna GitHub Actions Secret",
@@ -99,6 +101,17 @@
     "copied": "Secret copiato negli appunti temporanei.",
     "secretSaved": "Secret salvato. Ora aggiorna le destinazioni collegate.",
     "referenceSaved": "Riferimento salvato. Aggiungi il secret quando lo generi dal provider.",
+    "automationLabel": "Automazione",
+    "workflowLabel": "Flusso consigliato",
+    "secretKind": "Tipo di secret",
+    "oldSecretChecklistTitle": "Vecchia chiave ancora da revocare",
+    "oldSecretChecklistLead": "Spunta solo dopo aver propagato il nuovo valore e disattivato la chiave precedente nel provider.",
+    "workflow": [
+      "Apri la console del provider dal link ufficiale.",
+      "Genera il nuovo secret dal provider.",
+      "Incollalo in Rotate e salvalo nel vault locale.",
+      "Propagalo sulle destinazioni e poi revoca il vecchio valore."
+    ],
     "stripe": {
       "title": "Account Stripe",
       "description": "Gestisci la sostituzione assistita delle chiavi Stripe e propagale negli ambienti collegati.",
@@ -112,7 +125,17 @@
       "publicIdHint": "Serve come riferimento locale. La secret key resta nel vault.",
       "secretLabel": "Nuova secret key generata da Stripe",
       "resultTitle": "Secret Stripe pronta",
-      "valueLabel": "la nuova secret key Stripe"
+      "valueLabel": "la nuova secret key Stripe",
+      "automationTitle": "Assistita",
+      "automationLead": "Stripe genera o revoca le chiavi dalla Dashboard. Rotate conserva il nuovo valore e lo propaga sulle destinazioni.",
+      "secretKinds": {
+        "secretKey": "Secret key standard",
+        "restrictedKey": "Restricted key"
+      },
+      "secretKindHints": {
+        "secretKey": "Usala solo lato server e con privilegi strettamente necessari.",
+        "restrictedKey": "Preferibile quando puoi limitare permessi e superficie d'uso."
+      }
     },
     "paypal": {
       "title": "App PayPal",
@@ -127,7 +150,17 @@
       "publicIdHint": "Il Client ID non è segreto; il client secret resta nel vault.",
       "secretLabel": "Nuovo client secret generato da PayPal",
       "resultTitle": "Client secret PayPal pronto",
-      "valueLabel": "il nuovo client secret PayPal"
+      "valueLabel": "il nuovo client secret PayPal",
+      "automationTitle": "Assistita",
+      "automationLead": "PayPal gestisce i client secret dal Developer Dashboard. Rotate aiuta a custodire e propagare il nuovo valore.",
+      "secretKinds": {
+        "clientSecretLive": "Client secret Live",
+        "clientSecretSandbox": "Client secret Sandbox"
+      },
+      "secretKindHints": {
+        "clientSecretLive": "Usalo per produzione e propagalo solo su ambienti live.",
+        "clientSecretSandbox": "Usalo per test e ambienti non produttivi."
+      }
     },
     "facebook": {
       "title": "App Facebook",
@@ -142,7 +175,15 @@
       "publicIdHint": "L'App ID non è segreto; l'App Secret resta nel vault.",
       "secretLabel": "Nuovo App Secret generato da Facebook",
       "resultTitle": "App Secret Facebook pronto",
-      "valueLabel": "il nuovo App Secret Facebook"
+      "valueLabel": "il nuovo App Secret Facebook",
+      "automationTitle": "Assistita",
+      "automationLead": "Meta richiede la gestione dell'App Secret nella dashboard. Rotate si occupa del vault locale e delle destinazioni.",
+      "secretKinds": {
+        "appSecret": "App Secret"
+      },
+      "secretKindHints": {
+        "appSecret": "Valore server-side usato per firmare o verificare chiamate dell'app."
+      }
     },
     "discord": {
       "title": "App Discord",
@@ -157,7 +198,17 @@
       "publicIdHint": "L'Application ID non è segreto; bot token e client secret restano nel vault.",
       "secretLabel": "Nuovo bot token o client secret Discord",
       "resultTitle": "Secret Discord pronto",
-      "valueLabel": "il nuovo secret Discord"
+      "valueLabel": "il nuovo secret Discord",
+      "automationTitle": "Assistita",
+      "automationLead": "Discord resetta bot token e client secret dal Developer Portal. Rotate rende sicura la propagazione successiva.",
+      "secretKinds": {
+        "botToken": "Bot token",
+        "clientSecret": "OAuth client secret"
+      },
+      "secretKindHints": {
+        "botToken": "Usalo per bot Discord e Gateway/REST API del bot.",
+        "clientSecret": "Usalo nei flussi OAuth server-side della tua applicazione."
+      }
     },
     "twitch": {
       "title": "App Twitch",
@@ -172,7 +223,15 @@
       "publicIdHint": "Il Client ID non è segreto; il client secret resta nel vault.",
       "secretLabel": "Nuovo client secret generato da Twitch",
       "resultTitle": "Client secret Twitch pronto",
-      "valueLabel": "il nuovo client secret Twitch"
+      "valueLabel": "il nuovo client secret Twitch",
+      "automationTitle": "Assistita",
+      "automationLead": "Twitch genera un nuovo secret dalla Developer Console e invalida il precedente. Rotate propaga subito il nuovo valore.",
+      "secretKinds": {
+        "clientSecret": "Client secret"
+      },
+      "secretKindHints": {
+        "clientSecret": "Necessario per flussi OAuth server-side e app access token."
+      }
     }
   },
   "googleOauth": {
