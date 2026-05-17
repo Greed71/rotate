@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CloudflareDetail } from "./components/CloudflareDetail";
+import { CustomSecretDetail } from "./components/CustomSecretDetail";
 import { ExploreView } from "./components/ExploreView";
 import { GitHubDetail } from "./components/GitHubDetail";
 import { HomeView } from "./components/HomeView";
@@ -230,6 +231,12 @@ function MainShell(props: {
               />
             ) : openedService.provider === "github" ? (
               <GitHubDetail integration={openedService} onBack={closeServiceDetail} />
+            ) : openedService.provider === "custom_secret" ? (
+              <CustomSecretDetail
+                integration={openedService}
+                integrations={integrations}
+                onBack={closeServiceDetail}
+              />
             ) : openedService.provider === "stripe" ||
               openedService.provider === "paypal" ||
               openedService.provider === "facebook" ||

@@ -47,6 +47,19 @@ pub struct OauthClientDto {
     pub label: Option<String>,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomSecretDto {
+    pub id: String,
+    pub integration_id: String,
+    pub name: String,
+    pub env_key: String,
+    pub profile: String,
+    pub format: String,
+    pub created_at: i64,
+    pub last_rotated_at: Option<i64>,
+}
+
 fn now_ms() -> Result<i64, String> {
     Ok(std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -125,6 +138,19 @@ fn migrate(conn: &Connection) -> Result<(), String> {
             key_name TEXT NOT NULL,
             created_at INTEGER NOT NULL,
             FOREIGN KEY (managed_secret_id) REFERENCES managed_secrets(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS custom_secrets (
+            id TEXT PRIMARY KEY NOT NULL,
+            integration_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            env_key TEXT NOT NULL,
+            profile TEXT NOT NULL,
+            format TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            last_rotated_at INTEGER,
+            UNIQUE(integration_id, env_key),
+            FOREIGN KEY (integration_id) REFERENCES integrations(id) ON DELETE CASCADE
         );
         "#,
     )
@@ -260,7 +286,7 @@ pub fn list_integrations(app: &AppHandle) -> Result<Vec<IntegrationDto>, String>
 fn validate_provider(provider: &str) -> Result<(), String> {
     match provider {
         "cloudflare" | "vercel" | "supabase" | "resend" | "oauth_google" | "github" | "stripe"
-        | "paypal" | "facebook" | "discord" | "twitch" => Ok(()),
+        | "paypal" | "facebook" | "discord" | "twitch" | "custom_secret" => Ok(()),
         _ => Err("Provider non supportato".into()),
     }
 }
@@ -638,5 +664,121 @@ pub fn mark_managed_secret_rotated(
         ],
     )
     .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub fn list_custom_secrets(
+    app: &AppHandle,
+    integration_id: &str,
+) -> Result<Vec<CustomSecretDto>, String> {
+    let conn = open_conn(app)?;
+    let mut stmt = conn
+        .prepare(
+            r#"
+            SELECT id, integration_id, name, env_key, profile, format, created_at, last_rotated_at
+            FROM custom_secrets
+            WHERE integration_id = ?1
+            ORDER BY created_at ASC
+            "#,
+        )
+        .map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map(params![integration_id], |row| {
+            Ok(CustomSecretDto {
+                id: row.get(0)?,
+                integration_id: row.get(1)?,
+                name: row.get(2)?,
+                env_key: row.get(3)?,
+                profile: row.get(4)?,
+                format: row.get(5)?,
+                created_at: row.get(6)?,
+                last_rotated_at: row.get(7)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+    let mut out = Vec::new();
+    for r in rows {
+        out.push(r.map_err(|e| e.to_string())?);
+    }
+    Ok(out)
+}
+
+pub fn upsert_custom_secret(
+    app: &AppHandle,
+    integration_id: &str,
+    name: &str,
+    env_key: &str,
+    profile: &str,
+    format: &str,
+) -> Result<CustomSecretDto, String> {
+    let conn = open_conn(app)?;
+    let id = uuid::Uuid::new_v4().to_string();
+    let created_at = now_ms()?;
+    conn.execute(
+        r#"
+        INSERT INTO custom_secrets (id, integration_id, name, env_key, profile, format, created_at, last_rotated_at)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)
+        ON CONFLICT(integration_id, env_key) DO UPDATE SET
+            name = excluded.name,
+            profile = excluded.profile,
+            format = excluded.format,
+            last_rotated_at = excluded.last_rotated_at
+        "#,
+        params![id, integration_id, name, env_key, profile, format, created_at],
+    )
+    .map_err(|e| e.to_string())?;
+    get_custom_secret_by_env_key(app, integration_id, env_key)?
+        .ok_or_else(|| "Custom secret non trovato dopo il salvataggio.".to_string())
+}
+
+pub fn get_custom_secret_by_env_key(
+    app: &AppHandle,
+    integration_id: &str,
+    env_key: &str,
+) -> Result<Option<CustomSecretDto>, String> {
+    let conn = open_conn(app)?;
+    let mut stmt = conn
+        .prepare(
+            r#"
+            SELECT id, integration_id, name, env_key, profile, format, created_at, last_rotated_at
+            FROM custom_secrets
+            WHERE integration_id = ?1 AND env_key = ?2
+            "#,
+        )
+        .map_err(|e| e.to_string())?;
+    let mut rows = stmt
+        .query_map(params![integration_id, env_key], |row| {
+            Ok(CustomSecretDto {
+                id: row.get(0)?,
+                integration_id: row.get(1)?,
+                name: row.get(2)?,
+                env_key: row.get(3)?,
+                profile: row.get(4)?,
+                format: row.get(5)?,
+                created_at: row.get(6)?,
+                last_rotated_at: row.get(7)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+    match rows.next() {
+        Some(r) => Ok(Some(r.map_err(|e| e.to_string())?)),
+        None => Ok(None),
+    }
+}
+
+pub fn mark_custom_secret_rotated(app: &AppHandle, id: &str) -> Result<(), String> {
+    let conn = open_conn(app)?;
+    conn.execute(
+        "UPDATE custom_secrets SET last_rotated_at = ?2 WHERE id = ?1",
+        params![id, now_ms()?],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub fn delete_custom_secret(app: &AppHandle, id: &str) -> Result<(), String> {
+    let conn = open_conn(app)?;
+    conn.execute("DELETE FROM custom_secrets WHERE id = ?1", params![id])
+        .map_err(|e| e.to_string())?;
     Ok(())
 }

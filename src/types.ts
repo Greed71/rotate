@@ -11,7 +11,8 @@ export type ProviderId =
   | "paypal"
   | "facebook"
   | "discord"
-  | "twitch";
+  | "twitch"
+  | "custom_secret";
 
 export type AutomationLevel = "full" | "partial" | "manual";
 
@@ -153,6 +154,36 @@ export type ManualSecretStatusDto = {
   linked: boolean;
   publicId: string | null;
   label: string | null;
+};
+
+export type CustomSecretProfile =
+  | "random_secret"
+  | "hmac_sha256"
+  | "aes_256_gcm"
+  | "xchacha20_poly1305"
+  | "jwt_hs256"
+  | "jwt_hs512";
+
+export type CustomSecretFormat = "base64" | "base64url" | "hex";
+
+export type CustomSecretRow = {
+  id: string;
+  integrationId: string;
+  name: string;
+  envKey: string;
+  profile: CustomSecretProfile;
+  format: CustomSecretFormat;
+  createdAt: number;
+  lastRotatedAt: number | null;
+};
+
+export type CustomSecretRotateResult = {
+  id: string;
+  name: string;
+  envKey: string;
+  profile: CustomSecretProfile;
+  format: CustomSecretFormat;
+  value: string;
 };
 
 export type GithubStatusDto = {

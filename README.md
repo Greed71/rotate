@@ -3,376 +3,252 @@
 ![Node.js](https://img.shields.io/badge/Node.js-LTS-brightgreen)
 ![Rust](https://img.shields.io/badge/Rust-stable-orange)
 ![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB)
+![React](https://img.shields.io/badge/React-19-61DAFB)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-Rotate is a **local-first desktop app** built with **Tauri 2**, **React 19**, and **Rust** for managing provider credentials and rotating API secrets from one vault.
+Rotate is a local-first desktop app for managing secrets, rotating API keys, and propagating new values to deployment destinations from one encrypted local vault.
 
-The current focus is Cloudflare plus deployment destinations: link management tokens, rotate Cloudflare secrets, and push rotated Turnstile secrets into Cloudflare Workers, Pages, Secrets Store, Vercel project environment variables, or Supabase Edge Function secrets.
+It is built with Tauri 2, React 19, TypeScript, Rust, SQLite, the OS credential store, and Windows DPAPI fallback storage.
 
-> After `npm install`, run `npm run desktop`. The app UI is Italian; this README is in English for GitHub.
+> The app UI supports Italian and English. The README is in English for GitHub.
 
----
+## Download
 
-## Features
+Prebuilt installers should be attached to GitHub Releases:
 
-- **Local vault**: protected by a vault password. Rotate stores only a salted **Argon2id** hash in SQLite, never the password itself.
-- **Timed unlock session**: secrets are accessible only while the vault session is unlocked; the session lives in memory and expires automatically.
-- **Secure local secret storage**: provider tokens are written to the OS credential store when it works. On Windows setups where Credential Manager reports success but does not persist, Rotate falls back to **DPAPI-encrypted local storage** for the current Windows user.
-- **Cloudflare account linking**: save Account ID plus a management API token.
-- **Cloudflare API token rotation**: list account tokens when permitted, clone an existing token's policies, create a new token, show the new secret once, and optionally revoke the old token.
-- **Manual API token rotation by ID**: rotate a Cloudflare API token even when it does not appear in the list, as long as you know its token ID.
-- **Turnstile secret rotation**: list Turnstile widgets, rotate a widget secret, choose immediate invalidation or a 2-hour grace period, and show the new secret once.
-- **Access Service Token rotation**: list Cloudflare Zero Trust Access Service Tokens and rotate their `client_secret` with immediate invalidation or a 2-hour grace period.
-- **Workers secret updates**: list Workers scripts, inspect secret binding names, and write a newly rotated Turnstile secret into a selected Workers secret binding.
-- **Pages secret updates**: list Cloudflare Pages projects, inspect production/preview environment variable names, and write a newly rotated Turnstile secret as an encrypted Pages secret.
-- **Secrets Store updates**: list account-level Secrets Store stores and secret metadata, then create or replace a secret value from a rotation result.
-- **Vercel environment updates**: connect a Vercel Access Token, list projects, inspect environment variable names, and upsert an encrypted environment variable after a Turnstile rotation.
-- **Supabase API key rotation**: connect a Supabase Personal Access Token, list project API keys, create a Supabase-generated replacement key, show it once, and optionally delete the old key.
-- **Supabase Edge Function secrets**: list project secret names and bulk-update selected Edge Function secrets with a value produced by another rotation flow.
-- **Resend API key rotation**: connect a Resend management API key, list API keys, create a replacement key, show it once, and optionally delete the old key.
-- **Google OAuth assisted rotation**: store a Google OAuth Client ID and client secret locally, replace the secret generated from Google Cloud Console, and push it to deployment env vars.
-- **Clipboard safety**: sensitive values copied from the app are auto-cleared where supported.
+[Download the latest release](https://github.com/<org-or-user>/rotate/releases/latest)
 
----
+Replace `<org-or-user>` with the final GitHub repository owner before publishing.
 
-## Cloudflare Permissions
+## What Rotate Can Do
 
-Rotate separates the **management token** from the secrets it rotates. The management token is the Cloudflare API token you paste into Rotate so the app can call Cloudflare on your behalf.
+- Protect access with a local vault password and timed in-memory unlock session.
+- Store provider tokens in the OS credential store when reliable.
+- Fall back to DPAPI-encrypted local storage on Windows when Credential Manager does not persist credentials correctly.
+- Rotate Cloudflare API tokens by cloning policies from an existing token.
+- Rotate Cloudflare Turnstile secrets and propagate them to multiple destinations.
+- Rotate Cloudflare Access / Zero Trust Service Token client secrets.
+- Update Cloudflare Workers secrets, Pages secrets, and Secrets Store entries.
+- Rotate Supabase project API keys generated by Supabase.
+- Rotate a Supabase database password and build direct, transaction pooler, or session pooler `DATABASE_URL` values.
+- Update Supabase project secrets / Edge Function secrets.
+- Rotate Resend API keys.
+- Assist Google OAuth, Stripe, PayPal, Facebook, Discord, and Twitch secret replacement flows.
+- Generate and rotate custom cryptographic secrets with safe profiles.
+- Propagate rotated values to Vercel env vars, GitHub Actions Secrets, Supabase secrets, and local `.env` files.
+- Copy sensitive values with temporary clipboard clearing where supported.
 
-Recommended Cloudflare token permissions depend on what you want Rotate to do:
+## Supported Providers
 
-| Capability | Required Cloudflare permission |
-| --- | --- |
-| Verify the token and account | Account access to the target account |
-| List account API tokens | `Account - API Tokens - Read` |
-| Rotate account API tokens | `Account - API Tokens - Edit` |
-| List Turnstile widgets | Turnstile/account read access for the account |
-| Rotate Turnstile secrets | `Account - Turnstile Sites - Edit` or `Account - Account Settings - Edit` |
-| List Access Service Tokens | Zero Trust Access Service Tokens read access |
-| Rotate Access Service Tokens | Zero Trust Access Service Tokens write access |
-| List Workers scripts and secret binding names | `Account - Workers Scripts - Read` |
-| Update a Workers secret binding | `Account - Workers Scripts - Edit` |
-| List Pages projects and env names | `Account - Pages - Read` |
-| Update Pages secrets | `Account - Pages - Edit` |
-| List Secrets Store stores/secrets | Secrets Store read access |
-| Create or update Secrets Store secrets | `Secrets Store Write` |
+| Provider | Support level | Main capabilities |
+| --- | --- | --- |
+| Cloudflare | Full / partial by product | API tokens, Turnstile, Access Service Tokens, Workers secrets, Pages secrets, Secrets Store |
+| Vercel | Destination | Project env variable upsert |
+| GitHub | Destination | Actions Secrets upsert |
+| Supabase | Source + destination | API key rotation, database password rotation, project secrets |
+| Resend | Partial automation | API key creation/rotation |
+| Google OAuth | Assisted | Store and propagate Google-generated client secrets |
+| Stripe | Assisted | Store and propagate dashboard-generated keys |
+| PayPal | Assisted | Store and propagate dashboard-generated client secrets |
+| Facebook | Assisted | Store and propagate Meta-generated App Secrets |
+| Discord | Assisted | Store and propagate bot tokens or OAuth client secrets |
+| Twitch | Assisted | Store and propagate Developer Console client secrets |
+| Custom Secrets | Full local generation | Generate, rotate, store, and propagate app-specific cryptographic secrets |
 
-If Turnstile widgets are visible but rotation returns `Authentication error (Cloudflare code 10000)`, the token can read the widget but cannot write/rotate it. Reconnect Cloudflare in Rotate with a token that includes `Turnstile Sites Write` or `Account Settings Write`.
+## Custom Secrets
 
-If Workers are visible but updating a binding fails, reconnect Cloudflare with `Workers Scripts Write`. Cloudflare does not return existing Workers secret values, so Rotate shows binding names only.
+Custom Secrets are generated locally by Rotate with cryptographically secure randomness. The app deliberately exposes profiles, not arbitrary low-level algorithms.
 
-Access Service Tokens consist of a Client ID and Client Secret. Cloudflare shows the new Client Secret only in the rotation response, so Rotate displays it once and does not store it locally.
+Available profiles:
 
-Pages and Secrets Store values are write-only from Rotate's point of view. The app can show names and metadata, then write a new secret value, but it cannot recover an existing secret value from Cloudflare.
+- Random secret
+- HMAC-SHA256 key
+- AES-256-GCM key
+- XChaCha20-Poly1305 key
+- JWT HS256 secret
+- JWT HS512 secret
 
----
+Available output formats:
+
+- Base64 URL-safe
+- Base64
+- Hex
+
+After generation or rotation, Rotate shows the new value once and lets you propagate it to Vercel, GitHub Actions Secrets, Supabase secrets, and local `.env` files.
 
 ## Security Model
 
-Rotate is local-first. There is no backend service and no cloud sync.
+Rotate is local-first. There is no hosted backend and no cloud sync.
 
-| Asset | Storage |
+| Asset | Storage / handling |
 | --- | --- |
-| Vault password | Never stored directly; salted Argon2id PHC hash in SQLite (`vault_settings`) |
+| Vault password | Never stored directly; salted Argon2id PHC hash in SQLite |
 | Unlock session | RAM only; expires automatically |
-| Cloudflare management token | OS credential store when reliable; otherwise DPAPI-encrypted local file on Windows |
-| Rotated one-time secrets | Shown once in the UI; not silently written to `.env` files |
-| Workers destination updates | Sent directly to Cloudflare Workers; the secret value is not stored locally |
-| Vercel destination updates | Sent directly to Vercel project environment variables; the secret value is not stored locally |
-| Supabase destination updates | Sent directly to Supabase Edge Function secrets; the secret value is not stored locally |
-| Supabase database password | Generated locally for the rotation request, shown once as password and direct `DATABASE_URL`, never stored locally |
-| Resend management token | OS credential store when reliable; otherwise DPAPI-encrypted local file on Windows |
-| Google OAuth client secret | OS credential store when reliable; otherwise DPAPI-encrypted local file on Windows |
-| Metadata | SQLite app data directory (`rotate.db`) |
+| Provider management tokens | OS credential store, or DPAPI-encrypted local fallback on Windows |
+| Custom secret values | Local secure storage; revealed only immediately after generation or rotation |
+| One-time rotated provider secrets | Shown once in the UI; not silently written anywhere |
+| Destination writes | Sent directly to the selected provider or `.env` file |
+| Metadata | SQLite app data directory |
 
-The vault password must be at least 12 characters. Under 16 characters, Rotate requires a mix across character classes and rejects common predictable fragments. Backend validation enforces this; the frontend checks are only ergonomic.
+The vault password must be at least 12 characters. Shorter, predictable, or weak patterns are rejected by backend validation.
 
-### Credential Manager and DPAPI
+Do not commit `.env` files, `rotate.db`, provider tokens, generated app data, installers containing private state, or local vault artifacts.
 
-On normal Windows setups, Rotate uses Windows Credential Manager through the Rust `keyring` crate. During testing, one Windows profile returned success from both `keyring` and `cmdkey` while `cmdkey /list` still showed no persisted credentials. For that case, Rotate verifies persistence after writing. If the credential store does not actually retain the secret, Rotate stores an encrypted fallback using Windows DPAPI, bound to the current Windows user.
+## Cloudflare Permissions
 
-Do not commit `rotate.db`, `.env` files, generated app data, or tokens.
+Rotate separates the Cloudflare management token from the secrets it rotates.
 
----
+| Capability | Required Cloudflare permission |
+| --- | --- |
+| Verify account/token | Account access to the target account |
+| List account API tokens | `Account - API Tokens - Read` |
+| Rotate account API tokens | `Account - API Tokens - Edit` |
+| List Turnstile widgets | Turnstile/account read access |
+| Rotate Turnstile secrets | Turnstile write access or Account Settings write access |
+| List Access Service Tokens | Zero Trust Access Service Tokens read access |
+| Rotate Access Service Tokens | Zero Trust Access Service Tokens write access |
+| List Workers scripts and secret names | `Account - Workers Scripts - Read` |
+| Update Workers secret bindings | `Account - Workers Scripts - Edit` |
+| List Pages projects/env names | `Account - Pages - Read` |
+| Update Pages secrets | `Account - Pages - Edit` |
+| List Secrets Store metadata | Secrets Store read access |
+| Create/update Secrets Store secrets | Secrets Store write access |
 
-## Architecture
+Cloudflare, Workers, Pages, and Secrets Store do not return existing secret values. Rotate can list metadata and write replacements, but it cannot recover old secret values.
 
-```text
-rotate/
-├── src/                       React UI
-│   ├── components/            Views, vault screens, provider details
-│   ├── components/provider/   Shared provider UI shell components
-│   ├── locales/               Italian and English UI strings
-│   ├── secretDestinations.ts  Source/destination model for rotated secrets
-│   └── types.ts               IPC DTO types
-├── src-tauri/
-│   ├── src/
-│   │   ├── lib.rs             Tauri commands and IPC registration
-│   │   ├── db.rs              SQLite migrations and metadata
-│   │   ├── security.rs        Vault password hashing, unlock TTL, auth throttling
-│   │   ├── secrets.rs         Provider token store adapter over Credential Manager/DPAPI
-│   │   ├── cf_api.rs          Cloudflare API v4 client
-│   │   └── vercel_api.rs      Vercel API client
-│   ├── capabilities/          IPC permission allow-list
-│   └── tauri.conf.json        Tauri app config
-├── scripts/                   Desktop launch/build helpers
-└── package.json
-```
+## Propagation Destinations
 
-### Provider Pattern
+The generic propagation modal can update several destinations after a rotation:
 
-Provider screens share a small UI shell:
+- Vercel project environment variables
+- GitHub Actions Secrets
+- Supabase project secrets / Edge Function secrets
+- Local `.env` files selected through the native file picker
 
-- `ProviderHeader` renders the service title, intro, and back action.
-- `CredentialGuide` explains where to get credentials and links to official docs.
-- `ProviderLoadingPanel`, `AlertMessage`, and `LinkedAccountBar` keep loading, errors, and linked-account actions consistent.
-- `DeployTargetsPicker` centralizes the deployment target selector used by Vercel-style destinations.
+Rotate reads only variable names from `.env` files and writes the selected new value into the chosen key.
 
-Provider credentials go through `src-tauri/src/secrets.rs`. The `ProviderToken` adapter keeps provider IDs and labels in one place while preserving the Cloudflare legacy credential migration path.
+## Development
 
-### Secret Source and Destination Pattern
+Requirements:
 
-Rotate treats a rotation as two separate steps:
-
-1. A source produces a one-time secret, such as a Cloudflare Turnstile secret or Access Client Secret.
-2. One or more destinations receive that value, such as Cloudflare Workers, Pages, Secrets Store, Vercel environment variables, and Supabase Edge Function secrets.
-
-The frontend model lives in `src/secretDestinations.ts`. This keeps new providers from becoming hard-coded special cases inside an existing rotation flow.
-
-### IPC Flow
-
-The frontend calls Rust commands with `@tauri-apps/api`:
-
-```ts
-import { invoke } from "@tauri-apps/api/core";
-
-const status = await invoke<SecurityStatusDto>("security_status");
-```
-
-Sensitive commands call `require_vault_access` in Rust. The vault password must be configured and the in-memory session must still be unlocked.
-
-When adding a new `#[tauri::command]`:
-
-1. Register it in `invoke_handler!` in `src-tauri/src/lib.rs`.
-2. Add the command name to `AppManifest::commands` in `src-tauri/build.rs`.
-3. Add `allow-<kebab-case-command>` to `src-tauri/capabilities/default.json`.
-
----
-
-## Getting Started
+- Node.js LTS
+- Rust stable
+- Windows WebView2 runtime on Windows
 
 ```bash
-# 1. Clone and install JS dependencies
-git clone https://github.com/<org-or-user>/rotate.git
-cd rotate
 npm install
-
-# 2. Install Rust if needed
-# https://rustup.rs/
-
-# 3. Run the desktop app
 npm run desktop
+```
 
-# 4. Frontend-only mode for UI work
-# This does not provide vault or provider IPC.
+Frontend-only mode:
+
+```bash
 npm run dev
 ```
 
-On Windows, if your terminal cannot find `cargo`, run from a shell where Rust is on `PATH`, or use the included scripts. `npm run desktop` runs `scripts/run-desktop.mjs`, which prepends `%USERPROFILE%\.cargo\bin` when present.
-
----
+Frontend-only mode is useful for UI work, but it does not provide the Tauri vault or provider IPC commands.
 
 ## Build
 
 ```bash
-# TypeScript + production frontend bundle
 npm run build
-
-# Native Tauri build
 npm run desktop:build
 ```
 
-If the global `npm` wrapper is broken on your machine, the underlying checks can be run directly:
+Useful direct checks:
 
 ```powershell
 node node_modules\typescript\bin\tsc
 node node_modules\vite\bin\vite.js build
 cd src-tauri
 cargo check
+cargo test
 ```
 
----
+## App Icons
 
-## Current Cloudflare Workflows
+Tauri currently references these app icon files in `src-tauri/tauri.conf.json`:
 
-### Link Cloudflare
+| File | Size / purpose |
+| --- | --- |
+| `src-tauri/icons/32x32.png` | 32 x 32 PNG |
+| `src-tauri/icons/128x128.png` | 128 x 128 PNG |
+| `src-tauri/icons/128x128@2x.png` | 256 x 256 PNG |
+| `src-tauri/icons/icon.ico` | Windows multi-size icon |
+| `src-tauri/icons/icon.icns` | macOS icon bundle |
+| `src-tauri/icons/icon.png` | Source / high-resolution PNG |
 
-1. Create a Cloudflare API token.
-2. Include only the permissions you need.
-3. In Rotate, add Cloudflare from Explore.
-4. Paste Account ID and the management token.
-5. Rotate stores the token locally in secure storage.
+Windows tile assets currently present:
 
-### Rotate an Account API Token
+| File | Size |
+| --- | --- |
+| `Square30x30Logo.png` | 30 x 30 |
+| `Square44x44Logo.png` | 44 x 44 |
+| `Square71x71Logo.png` | 71 x 71 |
+| `Square89x89Logo.png` | 89 x 89 |
+| `Square107x107Logo.png` | 107 x 107 |
+| `Square142x142Logo.png` | 142 x 142 |
+| `Square150x150Logo.png` | 150 x 150 |
+| `Square284x284Logo.png` | 284 x 284 |
+| `Square310x310Logo.png` | 310 x 310 |
+| `StoreLogo.png` | 50 x 50 |
 
-1. Open the Cloudflare account in Rotate.
-2. Pick a token from the API token list, or paste a token ID manually.
-3. Rotate clones the token policies.
-4. Cloudflare returns a new token secret once.
-5. Copy the new secret and update the service that uses it.
-6. Optionally revoke the old token.
+Recommended source artwork:
 
-### Rotate a Turnstile Secret
+- Use one master icon at `1024 x 1024`.
+- Keep the main mark readable at `32 x 32`.
+- Avoid thin lines and tiny text.
+- Keep safe padding around the mark, roughly 12-16% of the canvas.
+- Export transparent PNGs for Tauri icon generation.
 
-1. Make sure the management token has `Turnstile Sites Write` or `Account Settings Write`.
-2. Open the Turnstile section.
-3. Choose the widget.
-4. Pick either:
-   - rotate with a 2-hour grace period, or
-   - rotate and invalidate the old secret immediately.
-5. Copy the new secret and update the backend that calls Turnstile `/siteverify`.
+For an in-app home/logo mark, use:
 
-Cloudflare does not show the new secret again after the rotation response.
+- `512 x 512` PNG or SVG for the main home visual.
+- `256 x 256` if it is only a compact logo.
+- `1024 x 1024` if it may be reused for marketing, release pages, or high-DPI hero artwork.
 
-### Rotate an Access Service Token
+## Architecture
 
-1. Make sure the management token has Zero Trust Access Service Tokens read/write permissions.
-2. Open the Access Service Tokens section.
-3. Pick the service token.
-4. Choose either:
-   - rotate with a 2-hour grace period, or
-   - rotate and invalidate the previous Client Secret immediately.
-5. Copy the new Client Secret and update the service that sends `CF-Access-Client-Secret`.
+```text
+rotate/
+|-- src/                       React UI
+|   |-- components/            Views and provider detail screens
+|   |-- components/provider/   Shared provider UI and propagation components
+|   |-- components/cloudflare/ Cloudflare-specific sections
+|   |-- locales/               Italian and English UI strings
+|   |-- secretDestinations.ts  Destination model for rotated secrets
+|   `-- types.ts               IPC DTO types
+|-- src-tauri/
+|   |-- src/
+|   |   |-- lib.rs             Tauri commands and IPC registration
+|   |   |-- db.rs              SQLite migrations and metadata
+|   |   |-- security.rs        Vault password hashing and session TTL
+|   |   |-- secrets.rs         Credential Manager / DPAPI storage adapter
+|   |   |-- custom_secret_commands.rs
+|   |   |-- cf_api.rs
+|   |   |-- vercel_api.rs
+|   |   |-- supabase_api.rs
+|   |   |-- github_api.rs
+|   |   `-- resend_api.rs
+|   |-- capabilities/
+|   |-- icons/
+|   `-- tauri.conf.json
+|-- scripts/
+`-- package.json
+```
 
-Cloudflare Access keeps the Client ID stable and returns a new Client Secret. Rotate does not persist that Client Secret.
-
-### Push a Turnstile Secret to a Worker
-
-1. Make sure the management token has `Workers Scripts Read` and `Workers Scripts Write`.
-2. Rotate a Turnstile widget secret.
-3. In the result modal, choose the Worker script.
-4. Choose an existing secret binding name or type a new one, for example `TURNSTILE_SECRET_KEY`.
-5. Click **Write to Worker**.
-
-Rotate sends the new value to the Cloudflare Workers secret API. It does not store that value in SQLite or in the local provider metadata.
-
-### Push a Turnstile Secret to Pages
-
-1. Make sure the management token has Pages read/write permissions.
-2. Rotate a Turnstile widget secret.
-3. In the result modal, choose a Pages project and environment (`production` or `preview`).
-4. Choose an existing environment variable name or type a new one.
-5. Click **Write to Pages**.
-
-Rotate writes the value as a `secret_text` environment variable. Pages applies environment changes to subsequent builds/deployments.
-
-### Push a Turnstile Secret to Secrets Store
-
-1. Make sure the management token can list Secrets Store metadata and has `Secrets Store Write`.
-2. Rotate a Turnstile widget secret.
-3. In the result modal, choose a store.
-4. Choose an existing secret or type a new name.
-5. Set scopes such as `workers` or `workers, access`.
-6. Click **Write to Store**.
-
-Cloudflare Secrets Store never returns the secret value after write. Rotate stores no copy locally.
-
-### Push a Turnstile Secret to Vercel
-
-1. Add Vercel from Explore.
-2. Create a Vercel Access Token in Vercel account settings.
-3. Paste the token into Rotate. If the project belongs to a team, also add the Team ID.
-4. Rotate a Turnstile widget secret from the Cloudflare detail view.
-5. In the result modal, choose the Vercel project, env key, and targets (`production`, `preview`, `development`).
-6. Click **Write to Vercel**.
-
-Rotate calls Vercel's environment variable API with `upsert=true` and stores no copy of the rotated secret. Vercel applies the value to future deployments/builds.
-
-### Rotate a Resend API Key
-
-1. Add Resend from Explore.
-2. Create or copy a Resend API key with enough permission to list, create, and delete API keys.
-3. Paste it into Rotate as the local management key.
-4. Open the Resend detail view.
-5. Pick an existing API key and click **Rotate**, or create a new key.
-6. Rotate asks Resend for a new key, shows the token once, and can write it to Vercel as `RESEND_API_KEY`.
-7. Delete the old key only after the new value is deployed everywhere.
-
-Resend does not expose an existing API key value after creation. Rotate shows only the newly created value returned by Resend.
-
-### Manage a Google OAuth Client Secret
-
-Google OAuth client secret rotation is assisted rather than fully automatic.
-
-1. Add OAuth (Google) from Explore.
-2. Open Google Auth Platform Clients and select the OAuth client.
-3. Use **Add Secret** in Google Cloud Console to generate a new client secret.
-4. Paste the Client ID and new Client Secret into Rotate.
-5. Write the new value to Vercel as `GOOGLE_CLIENT_SECRET`, or copy it for another destination.
-6. After the new deployment is working, disable and delete the old secret in Google Cloud Console.
-
-Rotate stores the Client ID as metadata and the Client Secret in local secure storage. It does not create Google OAuth secrets itself because Google exposes that flow primarily through Google Cloud Console.
-
-### Rotate a Supabase API Key
-
-1. Add Supabase from Explore.
-2. Create a Supabase Personal Access Token from the account token page.
-3. Paste the token into Rotate. It must be able to read projects and read/write API keys.
-4. Open the Supabase detail view and choose the project.
-5. Pick an API key and click **Rotate**.
-6. Supabase creates the new key value; Rotate displays it once.
-7. Optionally write the new key directly into Vercel, defaulting to `SUPABASE_SERVICE_ROLE_KEY`.
-8. Optionally delete the old key immediately, or keep it while you update downstream services.
-
-Rotate does not generate Supabase API key values locally.
-
-### Rotate the Supabase Database Password
-
-1. Add Supabase from Explore and connect a Personal Access Token with database write permission.
-2. Open the Supabase detail view and choose the project.
-3. In the database password section, type the project ref to confirm the destructive action.
-4. Rotate generates a strong random database password and sends it to Supabase Management API.
-5. Rotate shows the new password and lets you build the `DATABASE_URL` as:
-   - direct connection: `postgresql://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres`
-   - transaction pooler: `postgresql://postgres.<project-ref>:<password>@<pooler-host>:6543/postgres`
-   - session pooler: `postgresql://postgres.<project-ref>:<password>@<pooler-host>:5432/postgres`
-6. Optionally write the selected URL directly into Vercel environment variables.
-7. Update every external backend, pool, deploy target, and secret store that uses the old `DATABASE_URL`.
-
-Supabase updates its managed services automatically, but hardcoded external database connections must be updated by you. Rotate does not persist the new password or URL.
-
-### Push a Turnstile Secret to Supabase Edge Functions
-
-1. Add Supabase from Explore.
-2. Create a Supabase Personal Access Token from the account token page.
-3. Paste the token into Rotate. The token must be able to read projects and read/write Edge Function secrets.
-4. Rotate a Turnstile widget secret from the Cloudflare detail view.
-5. In the result modal, choose the Supabase project and one or more secret names, for example `TURNSTILE_SECRET_KEY`.
-6. Click **Write to Supabase**.
-
-Rotate calls Supabase Management API `POST /v1/projects/{ref}/secrets` and stores no copy of the rotated secret. Supabase makes updated secrets available to Edge Functions immediately. Secret names cannot start with `SUPABASE_`.
-
-Supabase Edge Function secrets are environment variables: Supabase stores values supplied by the caller. They are not generated by Supabase. For Supabase-generated values, use the API key rotation flow above.
-
----
+Sensitive commands require an unlocked vault session on the Rust side. Frontend checks are ergonomic only.
 
 ## References
 
-- [Tauri v2 documentation](https://v2.tauri.app/)
-- [Cloudflare API v4](https://developers.cloudflare.com/api/)
-- [Cloudflare Turnstile API](https://developers.cloudflare.com/api/resources/turnstile/)
-- [Turnstile widget management API](https://developers.cloudflare.com/turnstile/get-started/widget-management/api/)
-- [Cloudflare Access Service Tokens API](https://developers.cloudflare.com/api/resources/zero_trust/subresources/access/subresources/service_tokens/)
-- [Cloudflare Workers scripts API](https://developers.cloudflare.com/api/resources/workers/subresources/scripts/)
-- [Cloudflare Workers secrets API](https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/secrets/)
-- [Cloudflare Pages projects API](https://developers.cloudflare.com/api/resources/pages/subresources/projects/)
-- [Cloudflare Secrets Store API](https://developers.cloudflare.com/api/resources/secrets_store/)
+- [Tauri v2](https://v2.tauri.app/)
+- [Cloudflare API](https://developers.cloudflare.com/api/)
 - [Vercel REST API](https://vercel.com/docs/rest-api)
-- [Vercel project environment variables API](https://vercel.com/docs/rest-api/reference/endpoints/projects/create-one-or-more-environment-variables)
 - [Supabase Management API](https://supabase.com/docs/reference/api/introduction)
-- [Supabase Edge Function secrets](https://supabase.com/docs/guides/functions/secrets)
-
----
+- [GitHub Actions Secrets API](https://docs.github.com/en/rest/actions/secrets)
+- [Resend API](https://resend.com/docs/api-reference/introduction)
+- [OWASP Secrets Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html)
+- [OWASP Cryptographic Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html)
 
 ## License
 

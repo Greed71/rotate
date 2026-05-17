@@ -1,6 +1,7 @@
 //! Rotate - backend Tauri (comandi IPC verso il frontend).
 
 mod cf_api;
+mod custom_secret_commands;
 mod db;
 mod github_api;
 mod local_env;
@@ -180,6 +181,11 @@ fn integrations_remove(
         }
         "twitch" => {
             secrets::twitch_secret_delete(&app, &integration_id)?;
+        }
+        "custom_secret" => {
+            for secret in db::list_custom_secrets(&app, &integration_id)? {
+                secrets::custom_secret_delete(&app, &secret.id)?;
+            }
         }
         _ => return Err("Provider non supportato.".into()),
     }
@@ -1166,6 +1172,10 @@ pub fn run() {
             simple_provider_commands::twitch_link,
             simple_provider_commands::twitch_status,
             simple_provider_commands::twitch_unlink,
+            custom_secret_commands::custom_secret_list,
+            custom_secret_commands::custom_secret_generate,
+            custom_secret_commands::custom_secret_rotate,
+            custom_secret_commands::custom_secret_delete,
             supabase_link,
             supabase_status,
             supabase_list_projects,

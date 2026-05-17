@@ -69,7 +69,10 @@ export function SecretPropagationModal({
               type="button"
               disabled={
                 state.batchBusy ||
-                (!state.includeVercel && !state.includeLocalEnv && !state.includeGithub)
+                (!state.includeVercel &&
+                  !state.includeLocalEnv &&
+                  !state.includeGithub &&
+                  !state.includeSupabase)
               }
               onClick={() => void state.applySelected()}
               className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-surface-0 disabled:opacity-50"
@@ -106,6 +109,17 @@ export function SecretPropagationModal({
               />
               <span className={!state.githubIntegration ? "text-ink-muted" : undefined}>
                 GitHub
+              </span>
+            </label>
+            <label className="flex items-center gap-1.5 rounded-lg border border-surface-3 px-2 py-1">
+              <input
+                type="checkbox"
+                checked={state.includeSupabase}
+                disabled={!state.supabaseIntegration}
+                onChange={(event) => state.setIncludeSupabase(event.target.checked)}
+              />
+              <span className={!state.supabaseIntegration ? "text-ink-muted" : undefined}>
+                Supabase
               </span>
             </label>
           </div>
@@ -260,6 +274,70 @@ export function SecretPropagationModal({
             <p className="mt-2 text-xs text-ink-muted">
               {t("propagation.connectGithub")}
             </p>
+          )}
+        </div>
+
+        <div className="mt-3 rounded-xl border border-surface-3/80 bg-surface-0/50 p-4">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+            {t("propagation.supabaseTitle")}
+          </h4>
+          {state.supabaseIntegration ? (
+            <>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <p className="text-xs text-ink-muted">{t("propagation.supabaseLead")}</p>
+                <button
+                  type="button"
+                  disabled={state.supabaseBusy}
+                  onClick={() => void state.refreshSupabaseProjects()}
+                  className="rounded-lg border border-surface-3 px-2.5 py-1 text-xs font-medium text-ink-muted hover:border-accent/40 disabled:opacity-50"
+                >
+                  {t("propagation.refreshProjects")}
+                </button>
+              </div>
+              <label className="mt-3 block space-y-1.5 text-xs font-semibold text-ink-muted">
+                <span>{t("propagation.project")}</span>
+                <select
+                  value={state.selectedSupabaseProjectRef}
+                  onChange={(event) => state.setSelectedSupabaseProjectRef(event.target.value)}
+                  className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
+                >
+                  {state.supabaseProjects.length === 0 ? (
+                    <option value="">{t("propagation.noSupabaseProjects")}</option>
+                  ) : null}
+                  {state.supabaseProjects.map((project) => (
+                    <option key={project.reference} value={project.reference}>
+                      {project.name} ({project.reference})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="mt-3 block space-y-1.5 text-xs font-semibold text-ink-muted">
+                <span>{t("propagation.supabaseSecretName")}</span>
+                <input
+                  value={state.supabaseSecretName}
+                  onChange={(event) => state.setSupabaseSecretName(event.target.value)}
+                  className="w-full rounded-lg border border-surface-3 bg-surface-0 px-3 py-2 font-mono text-sm font-normal text-ink outline-none ring-accent/40 focus:ring-2"
+                  autoComplete="off"
+                />
+              </label>
+              {state.supabaseHint ? <p className="mt-2 text-xs text-accent">{state.supabaseHint}</p> : null}
+              <div className="mt-3 flex justify-end">
+                <button
+                  type="button"
+                  disabled={
+                    state.supabaseBusy ||
+                    !state.selectedSupabaseProjectRef.trim() ||
+                    !state.supabaseSecretName.trim()
+                  }
+                  onClick={() => void state.writeSupabase()}
+                  className="rounded-lg border border-accent/50 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10 disabled:opacity-50"
+                >
+                  {state.supabaseBusy ? t("common.updating") : t("propagation.writeSupabase")}
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="mt-2 text-xs text-ink-muted">{t("propagation.connectSupabase")}</p>
           )}
         </div>
       </div>

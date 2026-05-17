@@ -7,6 +7,8 @@ import type {
   Integration,
   LocalEnvInspectResult,
   LocalEnvUpsertResult,
+  SupabaseProjectRow,
+  SupabaseSecretUpsertResult,
 } from "../../types";
 import { errText } from "./errors";
 import { useVercelEnvDestination } from "./useVercelEnvDestination";
@@ -27,6 +29,7 @@ export function useSecretPropagation({
   const { t } = useTranslation();
   const vercelIntegration = integrations.find((item) => item.provider === "vercel");
   const githubIntegration = integrations.find((item) => item.provider === "github");
+  const supabaseIntegration = integrations.find((item) => item.provider === "supabase");
   const vercel = useVercelEnvDestination({ vercelIntegration, defaultEnvKey, onError });
 
   const [localEnvPath, setLocalEnvPath] = useState("");
@@ -39,9 +42,15 @@ export function useSecretPropagation({
   const [githubSecretName, setGithubSecretName] = useState(defaultEnvKey);
   const [githubBusy, setGithubBusy] = useState(false);
   const [githubHint, setGithubHint] = useState<string | null>(null);
+  const [supabaseProjects, setSupabaseProjects] = useState<SupabaseProjectRow[]>([]);
+  const [selectedSupabaseProjectRef, setSelectedSupabaseProjectRef] = useState("");
+  const [supabaseSecretName, setSupabaseSecretName] = useState(defaultEnvKey);
+  const [supabaseBusy, setSupabaseBusy] = useState(false);
+  const [supabaseHint, setSupabaseHint] = useState<string | null>(null);
   const [includeVercel, setIncludeVercel] = useState(false);
   const [includeLocalEnv, setIncludeLocalEnv] = useState(false);
   const [includeGithub, setIncludeGithub] = useState(false);
+  const [includeSupabase, setIncludeSupabase] = useState(false);
   const [batchBusy, setBatchBusy] = useState(false);
   const [batchHint, setBatchHint] = useState<string | null>(null);
 
@@ -49,7 +58,29 @@ export function useSecretPropagation({
     vercel.setEnvKey(defaultEnvKey);
     setLocalEnvKey(defaultEnvKey);
     setGithubSecretName(defaultEnvKey);
+    setSupabaseSecretName(defaultEnvKey);
   }, [defaultEnvKey, vercel.setEnvKey]);
+
+  const refreshSupabaseProjects = useCallback(async () => {
+    if (!supabaseIntegration) return;
+    setSupabaseBusy(true);
+    setSupabaseHint(null);
+    try {
+      const rows = await invoke<SupabaseProjectRow[]>("supabase_list_projects", {
+        integrationId: supabaseIntegration.id,
+      });
+      setSupabaseProjects(rows);
+      setSelectedSupabaseProjectRef((current) => current || rows[0]?.reference || "");
+    } catch (err) {
+      onError(errText(err));
+    } finally {
+      setSupabaseBusy(false);
+    }
+  }, [onError, supabaseIntegration]);
+
+  useEffect(() => {
+    if (supabaseIntegration) void refreshSupabaseProjects();
+  }, [refreshSupabaseProjects, supabaseIntegration]);
 
   const inspectLocalEnv = useCallback(async () => {
     const path = localEnvPath.trim();
@@ -142,6 +173,48 @@ export function useSecretPropagation({
     }
   }, [githubIntegration, githubOwner, githubRepo, githubSecretName, onError, secretValue, t]);
 
+  const writeSupabase = useCallback(async () => {
+    if (!supabaseIntegration || !secretValue) return false;
+    const projectRef = selectedSupabaseProjectRef.trim();
+    const name = supabaseSecretName.trim();
+    if (!projectRef || !name) return false;
+    const project = supabaseProjects.find((item) => item.reference === projectRef);
+    setSupabaseBusy(true);
+    setSupabaseHint(null);
+    try {
+      const result = await invoke<SupabaseSecretUpsertResult[]>("supabase_upsert_project_secrets", {
+        payload: {
+          integrationId: supabaseIntegration.id,
+          projectRef,
+          projectName: project?.name ?? projectRef,
+          names: [name],
+          value: secretValue,
+        },
+      });
+      const saved = result[0];
+      setSupabaseHint(
+        t("propagation.supabaseUpdated", {
+          name: saved?.name ?? name,
+          project: saved?.projectName ?? project?.name ?? projectRef,
+        }),
+      );
+      return true;
+    } catch (err) {
+      onError(errText(err));
+      return false;
+    } finally {
+      setSupabaseBusy(false);
+    }
+  }, [
+    onError,
+    secretValue,
+    selectedSupabaseProjectRef,
+    supabaseIntegration,
+    supabaseProjects,
+    supabaseSecretName,
+    t,
+  ]);
+
   const writeVercel = useCallback(async () => {
     if (
       !vercelIntegration ||
@@ -160,6 +233,7 @@ export function useSecretPropagation({
     if (includeVercel) jobs.push(["Vercel", writeVercel]);
     if (includeLocalEnv) jobs.push(["Env locale", writeLocalEnv]);
     if (includeGithub) jobs.push(["GitHub", writeGithub]);
+    if (includeSupabase) jobs.push(["Supabase", writeSupabase]);
     if (jobs.length === 0) return;
     setBatchBusy(true);
     setBatchHint(null);
@@ -177,8 +251,10 @@ export function useSecretPropagation({
     includeGithub,
     includeLocalEnv,
     includeVercel,
+    includeSupabase,
     writeGithub,
     writeLocalEnv,
+    writeSupabase,
     writeVercel,
     t,
   ]);
@@ -186,6 +262,7 @@ export function useSecretPropagation({
   return {
     vercelIntegration,
     githubIntegration,
+    supabaseIntegration,
     vercel,
     localEnvPath,
     setLocalEnvPath,
@@ -206,12 +283,23 @@ export function useSecretPropagation({
     githubBusy,
     githubHint,
     writeGithub,
+    supabaseProjects,
+    selectedSupabaseProjectRef,
+    setSelectedSupabaseProjectRef,
+    supabaseSecretName,
+    setSupabaseSecretName,
+    supabaseBusy,
+    supabaseHint,
+    refreshSupabaseProjects,
+    writeSupabase,
     includeVercel,
     setIncludeVercel,
     includeLocalEnv,
     setIncludeLocalEnv,
     includeGithub,
     setIncludeGithub,
+    includeSupabase,
+    setIncludeSupabase,
     batchBusy,
     batchHint,
     applySelected,

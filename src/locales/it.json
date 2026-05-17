@@ -70,6 +70,13 @@
     "localEnvCreated": "Variabile {{key}} creata nel file env locale.",
     "localEnvUpdated": "Variabile {{key}} aggiornata nel file env locale.",
     "githubUpdated": "Secret {{name}} aggiornato in {{owner}}/{{repo}}.",
+    "supabaseTitle": "Aggiorna Supabase secret",
+    "supabaseLead": "Scrive il valore nei secret del progetto Supabase selezionato.",
+    "supabaseSecretName": "Nome secret Supabase",
+    "writeSupabase": "Scrivi in Supabase",
+    "connectSupabase": "Collega Supabase da Esplora per scrivere questo valore nei secret del progetto.",
+    "noSupabaseProjects": "Nessun progetto Supabase",
+    "supabaseUpdated": "Secret {{name}} aggiornato in {{project}}.",
     "updated": "aggiornato",
     "notUpdated": "non aggiornato"
   },
@@ -232,6 +239,69 @@
       "secretKindHints": {
         "clientSecret": "Necessario per flussi OAuth server-side e app access token."
       }
+    }
+  },
+  "customSecrets": {
+    "description": "Genera, conserva e ruota secret applicativi creati da Rotate con profili crittografici sicuri.",
+    "vaultTitle": "Vault custom attivo",
+    "vaultLead": "I valori restano nello storage sicuro locale e vengono mostrati solo appena generati o ruotati.",
+    "refresh": "Aggiorna elenco",
+    "createTitle": "Nuovo custom secret",
+    "createLead": "Scegli un profilo sicuro. Rotate genera il valore con random crittografico e lo prepara per la propagazione.",
+    "name": "Nome interno",
+    "envKey": "Variabile env",
+    "profile": "Profilo",
+    "format": "Formato",
+    "generate": "Genera secret",
+    "generating": "Generazione...",
+    "listTitle": "Secret custom",
+    "listLead": "Puoi ruotare ogni secret e propagare subito il nuovo valore sulle destinazioni collegate.",
+    "loadingTitle": "Caricamento custom secret",
+    "loadingDescription": "Sto leggendo i metadati salvati nel vault locale.",
+    "colName": "Nome",
+    "colProfile": "Profilo",
+    "colEnv": "Env",
+    "colRotated": "Ultima rotazione",
+    "colActions": "Azioni",
+    "empty": "Nessun custom secret creato.",
+    "rotate": "Ruota",
+    "delete": "Elimina",
+    "resultTitle": "Nuovo secret pronto",
+    "resultLead": "Valore generato per {{envKey}}. Copialo o propagalo subito: dopo la chiusura resta solo nel vault.",
+    "propagate": "Propaga",
+    "copy": "Copia secret",
+    "copied": "Secret copiato negli appunti temporanei.",
+    "valueLabel": "il nuovo custom secret",
+    "profiles": {
+      "random_secret": {
+        "label": "Random secret",
+        "hint": "32 byte casuali per webhook, app secret e token generici."
+      },
+      "hmac_sha256": {
+        "label": "HMAC-SHA256 key",
+        "hint": "Chiave 256-bit per firmare payload o token lato server."
+      },
+      "aes_256_gcm": {
+        "label": "AES-256-GCM key",
+        "hint": "Chiave 256-bit per cifratura simmetrica autenticata."
+      },
+      "xchacha20_poly1305": {
+        "label": "XChaCha20-Poly1305 key",
+        "hint": "Chiave 256-bit per cifratura moderna con nonce esteso."
+      },
+      "jwt_hs256": {
+        "label": "JWT HS256 secret",
+        "hint": "Secret forte per JWT firmati con HS256."
+      },
+      "jwt_hs512": {
+        "label": "JWT HS512 secret",
+        "hint": "Secret 512-bit per JWT firmati con HS512."
+      }
+    },
+    "formats": {
+      "base64url": "Base64 URL-safe",
+      "base64": "Base64",
+      "hex": "Hex"
     }
   },
   "googleOauth": {
@@ -472,6 +542,11 @@
       "title": "GitHub",
       "defaultLabel": "Account GitHub",
       "blurb": "Scrive Actions Secrets nei repository dopo una rotazione."
+    },
+    "custom_secret": {
+      "title": "Custom Secrets",
+      "defaultLabel": "Vault custom secrets",
+      "blurb": "Genera chiavi custom sicure, sceglie profilo e formato, poi propaga il nuovo valore dove serve."
     },
     "stripe": {
       "title": "Stripe",

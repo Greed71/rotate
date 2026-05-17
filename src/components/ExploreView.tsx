@@ -64,6 +64,13 @@ export function ExploreView({ integrations, onAdd }: Props) {
         envHints: ["ACTIONS_SECRET", "TURNSTILE_SECRET_KEY"],
       },
       {
+        id: "custom_secret",
+        name: t("providers.custom_secret.title"),
+        blurb: t("providers.custom_secret.blurb"),
+        automation: "full",
+        envHints: ["APP_SECRET", "JWT_SECRET", "ENCRYPTION_KEY"],
+      },
+      {
         id: "stripe",
         name: t("providers.stripe.title"),
         blurb: t("providers.stripe.blurb"),

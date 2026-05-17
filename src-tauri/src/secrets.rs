@@ -22,6 +22,7 @@ pub enum ProviderToken {
     Facebook,
     Discord,
     Twitch,
+    CustomSecret,
 }
 
 impl ProviderToken {
@@ -38,6 +39,7 @@ impl ProviderToken {
             Self::Facebook => "facebook",
             Self::Discord => "discord",
             Self::Twitch => "twitch",
+            Self::CustomSecret => "custom_secret",
         }
     }
 
@@ -54,6 +56,7 @@ impl ProviderToken {
             Self::Facebook => "Facebook",
             Self::Discord => "Discord",
             Self::Twitch => "Twitch",
+            Self::CustomSecret => "Custom Secret",
         }
     }
 }
@@ -527,6 +530,14 @@ pub fn twitch_secret_get(app: &AppHandle, integration_id: &str) -> Result<Option
 
 pub fn twitch_secret_delete(app: &AppHandle, integration_id: &str) -> Result<(), String> {
     provider_token_delete(app, integration_id, ProviderToken::Twitch)
+}
+
+pub fn custom_secret_save(app: &AppHandle, secret_id: &str, token: &str) -> Result<(), String> {
+    provider_token_save(app, secret_id, ProviderToken::CustomSecret, token)
+}
+
+pub fn custom_secret_delete(app: &AppHandle, secret_id: &str) -> Result<(), String> {
+    provider_token_delete(app, secret_id, ProviderToken::CustomSecret)
 }
 
 #[derive(Serialize)]

@@ -70,6 +70,13 @@
     "localEnvCreated": "Variable {{key}} created in the local env file.",
     "localEnvUpdated": "Variable {{key}} updated in the local env file.",
     "githubUpdated": "Secret {{name}} updated in {{owner}}/{{repo}}.",
+    "supabaseTitle": "Update Supabase secret",
+    "supabaseLead": "Writes the value to secrets in the selected Supabase project.",
+    "supabaseSecretName": "Supabase secret name",
+    "writeSupabase": "Write to Supabase",
+    "connectSupabase": "Connect Supabase from Explore to write this value to project secrets.",
+    "noSupabaseProjects": "No Supabase projects",
+    "supabaseUpdated": "Secret {{name}} updated in {{project}}.",
     "updated": "updated",
     "notUpdated": "not updated"
   },
@@ -232,6 +239,69 @@
       "secretKindHints": {
         "clientSecret": "Required for server-side OAuth flows and app access tokens."
       }
+    }
+  },
+  "customSecrets": {
+    "description": "Generate, store, and rotate application secrets created by Rotate with safe cryptographic profiles.",
+    "vaultTitle": "Custom vault active",
+    "vaultLead": "Values stay in local secure storage and are shown only right after generation or rotation.",
+    "refresh": "Refresh list",
+    "createTitle": "New custom secret",
+    "createLead": "Pick a safe profile. Rotate generates the value with cryptographic randomness and prepares it for propagation.",
+    "name": "Internal name",
+    "envKey": "Env variable",
+    "profile": "Profile",
+    "format": "Format",
+    "generate": "Generate secret",
+    "generating": "Generating...",
+    "listTitle": "Custom secrets",
+    "listLead": "Rotate each secret and immediately propagate the new value to linked destinations.",
+    "loadingTitle": "Loading custom secrets",
+    "loadingDescription": "Reading metadata stored in the local vault.",
+    "colName": "Name",
+    "colProfile": "Profile",
+    "colEnv": "Env",
+    "colRotated": "Last rotation",
+    "colActions": "Actions",
+    "empty": "No custom secrets created.",
+    "rotate": "Rotate",
+    "delete": "Delete",
+    "resultTitle": "New secret ready",
+    "resultLead": "Generated value for {{envKey}}. Copy or propagate it now: after closing, it remains only in the vault.",
+    "propagate": "Propagate",
+    "copy": "Copy secret",
+    "copied": "Secret copied to the temporary clipboard.",
+    "valueLabel": "the new custom secret",
+    "profiles": {
+      "random_secret": {
+        "label": "Random secret",
+        "hint": "32 random bytes for webhooks, app secrets, and generic tokens."
+      },
+      "hmac_sha256": {
+        "label": "HMAC-SHA256 key",
+        "hint": "256-bit key for signing payloads or server-side tokens."
+      },
+      "aes_256_gcm": {
+        "label": "AES-256-GCM key",
+        "hint": "256-bit key for authenticated symmetric encryption."
+      },
+      "xchacha20_poly1305": {
+        "label": "XChaCha20-Poly1305 key",
+        "hint": "256-bit key for modern encryption with extended nonces."
+      },
+      "jwt_hs256": {
+        "label": "JWT HS256 secret",
+        "hint": "Strong secret for JWTs signed with HS256."
+      },
+      "jwt_hs512": {
+        "label": "JWT HS512 secret",
+        "hint": "512-bit secret for JWTs signed with HS512."
+      }
+    },
+    "formats": {
+      "base64url": "Base64 URL-safe",
+      "base64": "Base64",
+      "hex": "Hex"
     }
   },
   "googleOauth": {
@@ -472,6 +542,11 @@
       "title": "GitHub",
       "defaultLabel": "GitHub account",
       "blurb": "Write Actions Secrets to repositories after a rotation."
+    },
+    "custom_secret": {
+      "title": "Custom Secrets",
+      "defaultLabel": "Custom secrets vault",
+      "blurb": "Generate safe custom keys, choose profile and format, then propagate the new value where needed."
     },
     "stripe": {
       "title": "Stripe",
