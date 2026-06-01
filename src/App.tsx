@@ -241,7 +241,8 @@ function MainShell(props: {
               openedService.provider === "paypal" ||
               openedService.provider === "facebook" ||
               openedService.provider === "discord" ||
-              openedService.provider === "twitch" ? (
+              openedService.provider === "twitch" ||
+              openedService.provider === "metered" ? (
               <ManualSecretProviderDetail
                 provider={openedService.provider}
                 integration={openedService}

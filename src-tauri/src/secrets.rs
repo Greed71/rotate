@@ -22,6 +22,7 @@ pub enum ProviderToken {
     Facebook,
     Discord,
     Twitch,
+    Metered,
     CustomSecret,
 }
 
@@ -39,6 +40,7 @@ impl ProviderToken {
             Self::Facebook => "facebook",
             Self::Discord => "discord",
             Self::Twitch => "twitch",
+            Self::Metered => "metered",
             Self::CustomSecret => "custom_secret",
         }
     }
@@ -56,6 +58,7 @@ impl ProviderToken {
             Self::Facebook => "Facebook",
             Self::Discord => "Discord",
             Self::Twitch => "Twitch",
+            Self::Metered => "Metered",
             Self::CustomSecret => "Custom Secret",
         }
     }
@@ -530,6 +533,22 @@ pub fn twitch_secret_get(app: &AppHandle, integration_id: &str) -> Result<Option
 
 pub fn twitch_secret_delete(app: &AppHandle, integration_id: &str) -> Result<(), String> {
     provider_token_delete(app, integration_id, ProviderToken::Twitch)
+}
+
+pub fn metered_secret_save(
+    app: &AppHandle,
+    integration_id: &str,
+    token: &str,
+) -> Result<(), String> {
+    provider_token_save(app, integration_id, ProviderToken::Metered, token)
+}
+
+pub fn metered_secret_get(app: &AppHandle, integration_id: &str) -> Result<Option<String>, String> {
+    provider_token_get(app, integration_id, ProviderToken::Metered)
+}
+
+pub fn metered_secret_delete(app: &AppHandle, integration_id: &str) -> Result<(), String> {
+    provider_token_delete(app, integration_id, ProviderToken::Metered)
 }
 
 pub fn custom_secret_save(app: &AppHandle, secret_id: &str, token: &str) -> Result<(), String> {

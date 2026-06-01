@@ -105,6 +105,13 @@ export function ExploreView({ integrations, onAdd }: Props) {
         automation: "manual",
         envHints: ["TWITCH_CLIENT_ID", "TWITCH_CLIENT_SECRET"],
       },
+      {
+        id: "metered",
+        name: t("providers.metered.title"),
+        blurb: t("providers.metered.blurb"),
+        automation: "manual",
+        envHints: ["METERED_DOMAIN", "METERED_SECRET_KEY"],
+      },
     ],
     [t],
   );

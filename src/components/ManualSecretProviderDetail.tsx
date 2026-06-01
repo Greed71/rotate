@@ -11,7 +11,7 @@ import { SecretPropagationModal } from "./provider/SecretPropagationModal";
 import { errText } from "./provider/errors";
 import { useSecretPropagation } from "./provider/useSecretPropagation";
 
-type ManualProvider = "stripe" | "paypal" | "facebook" | "discord" | "twitch";
+type ManualProvider = "stripe" | "paypal" | "facebook" | "discord" | "twitch" | "metered";
 
 type ProviderCopy = {
   label: string;
@@ -50,6 +50,12 @@ const COPY: Record<ManualProvider, ProviderCopy> = {
     links: [{ href: "https://dev.twitch.tv/console/apps", label: "Twitch Developer Console" }],
     defaultEnvKey: "TWITCH_CLIENT_SECRET",
     secretKinds: ["clientSecret"],
+  },
+  metered: {
+    label: "METERED",
+    links: [{ href: "https://dashboard.metered.ca/developers", label: "Metered Developers" }],
+    defaultEnvKey: "METERED_SECRET_KEY",
+    secretKinds: ["secretKey"],
   },
 };
 

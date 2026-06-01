@@ -34,6 +34,7 @@ Replace `<org-or-user>` with the final GitHub repository owner before publishing
 - Update Supabase project secrets / Edge Function secrets.
 - Rotate Resend API keys.
 - Assist Google OAuth, Stripe, PayPal, Facebook, Discord, and Twitch secret replacement flows.
+- Assist Metered Secret Key replacement and propagation flows.
 - Generate and rotate custom cryptographic secrets with safe profiles.
 - Propagate rotated values to Vercel env vars, GitHub Actions Secrets, Supabase secrets, and local `.env` files.
 - Copy sensitive values with temporary clipboard clearing where supported.
@@ -53,6 +54,7 @@ Replace `<org-or-user>` with the final GitHub repository owner before publishing
 | Facebook | Assisted | Store and propagate Meta-generated App Secrets |
 | Discord | Assisted | Store and propagate bot tokens or OAuth client secrets |
 | Twitch | Assisted | Store and propagate Developer Console client secrets |
+| Metered | Assisted | Store and propagate dashboard-generated Secret Keys |
 | Custom Secrets | Full local generation | Generate, rotate, store, and propagate app-specific cryptographic secrets |
 
 ## Custom Secrets
@@ -247,6 +249,7 @@ Sensitive commands require an unlocked vault session on the Rust side. Frontend 
 - [Supabase Management API](https://supabase.com/docs/reference/api/introduction)
 - [GitHub Actions Secrets API](https://docs.github.com/en/rest/actions/secrets)
 - [Resend API](https://resend.com/docs/api-reference/introduction)
+- [Metered REST API](https://www.metered.ca/docs/rest-api/)
 - [OWASP Secrets Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html)
 - [OWASP Cryptographic Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html)
 

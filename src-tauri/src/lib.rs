@@ -182,6 +182,9 @@ fn integrations_remove(
         "twitch" => {
             secrets::twitch_secret_delete(&app, &integration_id)?;
         }
+        "metered" => {
+            secrets::metered_secret_delete(&app, &integration_id)?;
+        }
         "custom_secret" => {
             for secret in db::list_custom_secrets(&app, &integration_id)? {
                 secrets::custom_secret_delete(&app, &secret.id)?;
@@ -1172,6 +1175,9 @@ pub fn run() {
             simple_provider_commands::twitch_link,
             simple_provider_commands::twitch_status,
             simple_provider_commands::twitch_unlink,
+            simple_provider_commands::metered_link,
+            simple_provider_commands::metered_status,
+            simple_provider_commands::metered_unlink,
             custom_secret_commands::custom_secret_list,
             custom_secret_commands::custom_secret_generate,
             custom_secret_commands::custom_secret_rotate,

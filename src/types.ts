@@ -12,6 +12,7 @@ export type ProviderId =
   | "facebook"
   | "discord"
   | "twitch"
+  | "metered"
   | "custom_secret";
 
 export type AutomationLevel = "full" | "partial" | "manual";

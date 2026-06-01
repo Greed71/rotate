@@ -453,3 +453,12 @@ manual_provider_commands!(
     secrets::twitch_secret_get,
     secrets::twitch_secret_delete
 );
+manual_provider_commands!(
+    "metered",
+    metered_link,
+    metered_status,
+    metered_unlink,
+    secrets::metered_secret_save,
+    secrets::metered_secret_get,
+    secrets::metered_secret_delete
+);

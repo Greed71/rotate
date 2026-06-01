@@ -286,7 +286,7 @@ pub fn list_integrations(app: &AppHandle) -> Result<Vec<IntegrationDto>, String>
 fn validate_provider(provider: &str) -> Result<(), String> {
     match provider {
         "cloudflare" | "vercel" | "supabase" | "resend" | "oauth_google" | "github" | "stripe"
-        | "paypal" | "facebook" | "discord" | "twitch" | "custom_secret" => Ok(()),
+        | "paypal" | "facebook" | "discord" | "twitch" | "metered" | "custom_secret" => Ok(()),
         _ => Err("Provider non supportato".into()),
     }
 }

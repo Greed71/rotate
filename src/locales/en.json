@@ -239,6 +239,29 @@
       "secretKindHints": {
         "clientSecret": "Required for server-side OAuth flows and app access tokens."
       }
+    },
+    "metered": {
+      "title": "Metered app",
+      "description": "Manage the Metered Secret Key from the Developers dashboard and propagate it to linked environments.",
+      "guideTitle": "Metered rotation",
+      "steps": [
+        "Open Metered Dashboard -> Developers.",
+        "Copy the Metered Domain/app name and generate or retrieve the Secret Key from the Developers section.",
+        "Paste the new Secret Key here and propagate it before retiring the previous value."
+      ],
+      "publicIdLabel": "Metered Domain or app name",
+      "publicIdHint": "Example: your-app.metered.live or just the app name. The Secret Key stays in the vault.",
+      "secretLabel": "New Metered Secret Key",
+      "resultTitle": "Metered Secret Key ready",
+      "valueLabel": "the new Metered Secret Key",
+      "automationTitle": "Assisted",
+      "automationLead": "Metered exposes the Secret Key in the Developers dashboard. Rotate stores it and propagates it to destinations.",
+      "secretKinds": {
+        "secretKey": "Secret Key"
+      },
+      "secretKindHints": {
+        "secretKey": "Use it server-side only when calling Metered REST APIs."
+      }
     }
   },
   "customSecrets": {
@@ -572,6 +595,11 @@
       "title": "Twitch",
       "defaultLabel": "Twitch app",
       "blurb": "Assisted handling for Twitch client secrets generated in the Developer Console."
+    },
+    "metered": {
+      "title": "Metered",
+      "defaultLabel": "Metered app",
+      "blurb": "Assisted handling for the Metered Secret Key and propagation to linked env vars and secrets."
     }
   },
   "services": {
